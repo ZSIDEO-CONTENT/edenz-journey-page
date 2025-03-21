@@ -52,7 +52,7 @@ const Destinations = () => {
           {destinations.map((destination, index) => (
             <div 
               key={destination.id} 
-              className="destination-card animate-slide-up"
+              className="destination-card group animate-slide-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="h-64 relative overflow-hidden">
