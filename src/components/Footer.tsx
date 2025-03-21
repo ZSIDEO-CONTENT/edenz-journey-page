@@ -12,7 +12,7 @@ const Footer = () => {
               <span className="font-medium">Consultant</span>
             </div>
             <p className="text-gray-400 mb-6">
-              Leading study abroad consultancy helping students achieve their global education dreams with personalized guidance and support.
+              Pakistan's leading study abroad consultancy helping students achieve their global education dreams with personalized guidance, visa processing, and test preparation.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="bg-gray-800 hover:bg-primary transition-colors p-2 rounded-full">
@@ -35,9 +35,9 @@ const Footer = () => {
             <ul className="space-y-3">
               <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">University Admissions</a></li>
               <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Visa Assistance</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Scholarship Guidance</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Test Preparation</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Pre-Departure Briefing</a></li>
+              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">IELTS Preparation</a></li>
+              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">PTE/TOEFL Training</a></li>
+              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">GRE/GMAT Coaching</a></li>
             </ul>
           </div>
           
@@ -57,15 +57,15 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start">
                 <MapPin className="h-5 w-5 text-primary mr-3 mt-1" />
-                <span className="text-gray-400">123 Education Street, Suite 400, New York, NY 10001</span>
+                <span className="text-gray-400">123 Education Street, Gulberg III, Lahore, Pakistan</span>
               </li>
               <li className="flex items-center">
                 <Phone className="h-5 w-5 text-primary mr-3" />
-                <span className="text-gray-400">+1 234 567 890</span>
+                <span className="text-gray-400">+92 42 1234 5678</span>
               </li>
               <li className="flex items-center">
                 <Mail className="h-5 w-5 text-primary mr-3" />
-                <span className="text-gray-400">contact@edenzconsultant.com</span>
+                <span className="text-gray-400">contact@edenzconsultant.org</span>
               </li>
             </ul>
           </div>

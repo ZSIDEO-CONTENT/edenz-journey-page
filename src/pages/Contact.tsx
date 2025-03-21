@@ -62,7 +62,7 @@ const Contact = () => {
                 Contact Us
               </h1>
               <p className="text-gray-600 text-lg">
-                Have questions about studying abroad? Get in touch with our expert counselors for personalized guidance and support.
+                Have questions about studying abroad? Get in touch with our expert counselors in Pakistan for personalized guidance and support.
               </p>
             </div>
           </div>
@@ -82,8 +82,8 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg mb-1">Phone</h3>
-                      <p className="text-gray-600">+1 234 567 890</p>
-                      <p className="text-gray-600">+1 987 654 321</p>
+                      <p className="text-gray-600">+92 42 1234 5678</p>
+                      <p className="text-gray-600">+92 321 1234567</p>
                     </div>
                   </div>
                 </div>
@@ -95,8 +95,8 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg mb-1">Email</h3>
-                      <p className="text-gray-600">info@edenzconsultant.com</p>
-                      <p className="text-gray-600">admissions@edenzconsultant.com</p>
+                      <p className="text-gray-600">info@edenzconsultant.org</p>
+                      <p className="text-gray-600">admissions@edenzconsultant.org</p>
                     </div>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-semibold text-lg mb-1">Office Address</h3>
                       <p className="text-gray-600">123 Education Street</p>
-                      <p className="text-gray-600">Suite 456, New York, NY 10001</p>
+                      <p className="text-gray-600">Gulberg III, Lahore, Pakistan</p>
                     </div>
                   </div>
                 </div>
@@ -227,13 +227,13 @@ const Contact = () => {
             <div className="max-w-3xl mx-auto text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Visit Our Office</h2>
               <p className="text-gray-600">
-                We're conveniently located in downtown New York. Stop by for a face-to-face consultation with our expert counselors.
+                We're conveniently located in Gulberg III, Lahore. Stop by for a face-to-face consultation with our expert counselors.
               </p>
             </div>
             
             <div className="rounded-2xl overflow-hidden shadow-lg h-[400px]">
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.15830869428!2d-74.11976397304603!3d40.69766374874431!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1659112347503!5m2!1sen!2s" 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13607.357375864521!2d74.32536572942507!3d31.51669272840727!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x391904f82733704d%3A0x9b923c9d1eacc7e!2sGulberg%20III%2C%20Lahore%2C%20Punjab%2C%20Pakistan!5e0!3m2!1sen!2sus!4v1695000000000!5m2!1sen!2sus" 
                 width="100%" 
                 height="400" 
                 style={{ border: 0 }} 

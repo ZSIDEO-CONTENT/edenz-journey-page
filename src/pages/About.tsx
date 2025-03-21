@@ -11,7 +11,7 @@ const About = () => {
         {/* Hero Section */}
         <section className="pt-32 pb-20 relative overflow-hidden">
           <div className="hero-blob h-[600px] w-[600px] right-[-300px] top-[-100px] opacity-30"></div>
-          <div className="hero-blob h-[600px] w-[600px] left-[-300px] bottom-[-100px] opacity-30"></div>
+          <div className="hero-blob h-[600px] w-[600px] left-[-300px] bottom-[-100px] opacity-30 animation-delay-2000"></div>
           
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center mb-16">
@@ -19,10 +19,10 @@ const About = () => {
                 About Us
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Your Trusted Study Abroad Partner
+                Your Trusted Study Abroad Partner in Pakistan
               </h1>
               <p className="text-gray-600 text-lg">
-                Edenz Consultant has been helping students achieve their global education dreams since 2010. With our expert guidance and personalized approach, we've successfully placed thousands of students in prestigious universities worldwide.
+                Edenz Consultant has been helping Pakistani students achieve their global education dreams since 2015. With our expert guidance and personalized approach, we've successfully placed thousands of students in prestigious universities worldwide.
               </p>
             </div>
             
@@ -45,16 +45,16 @@ const About = () => {
                   Our Story
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                  From a Small Office to a Global Presence
+                  From Lahore to the World
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Founded in 2010 by a team of education experts with a passion for international education, Edenz Consultant began as a small office with a big vision - to make quality global education accessible to ambitious students.
+                  Founded in 2015 in Lahore, Pakistan, Edenz Consultant began with a mission to help Pakistani students access quality education abroad. What started as a small team with big ambitions has now grown into one of Pakistan's most trusted education consultancies.
                 </p>
                 <p className="text-gray-600 mb-6">
-                  Over the years, we've grown into a trusted name in international education consultancy, with a proven track record of helping thousands of students achieve their academic and career goals overseas.
+                  We understand the unique challenges Pakistani students face when applying to international universities, from academic requirements to visa processes. Our specialized knowledge and experience have helped thousands of students overcome these challenges.
                 </p>
                 <p className="text-gray-600">
-                  Our journey has been shaped by the success stories of our students who are now thriving professionals across the globe, and we continue to evolve our services to meet the changing needs of aspiring international students.
+                  Beyond admissions, we take pride in our comprehensive test preparation programs for IELTS, PTE, TOEFL, GRE, and GMAT, helping students build the skills they need to succeed in international academics.
                 </p>
               </div>
               
@@ -145,24 +145,24 @@ const About = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
                 {
-                  name: "Sarah Johnson",
+                  name: "Ahmed Khan",
                   position: "Founder & CEO",
-                  image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-                },
-                {
-                  name: "Michael Chen",
-                  position: "Head Counselor",
                   image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
                 },
                 {
-                  name: "Priya Sharma",
-                  position: "Visa Specialist",
-                  image: "https://images.unsplash.com/photo-1619422586083-facf9e26e672?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=686&q=80"
+                  name: "Fatima Rizvi",
+                  position: "Head Counselor",
+                  image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
                 },
                 {
-                  name: "David Wilson",
-                  position: "University Relations",
+                  name: "Zain Malik",
+                  position: "Visa Specialist",
                   image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
+                },
+                {
+                  name: "Ayesha Ahmed",
+                  position: "IELTS Instructor",
+                  image: "https://images.unsplash.com/photo-1619422586083-facf9e26e672?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=686&q=80"
                 }
               ].map((member, index) => (
                 <div 

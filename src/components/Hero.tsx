@@ -13,7 +13,7 @@ const Hero = () => {
         <div className="grid md:grid-cols-2 gap-10 items-center">
           <div className="space-y-6 md:pr-10 animate-fade-in">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm">
-              <span className="animate-pulse mr-2">●</span> Transforming Study Abroad Dreams
+              <span className="animate-pulse mr-2">●</span> Pakistan's Premier Education Consultancy
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight">
@@ -21,7 +21,7 @@ const Hero = () => {
             </h1>
             
             <p className="text-lg text-gray-600 md:pr-10">
-              Edenz Consultant provides expert guidance for students aspiring to study abroad. Let our experienced consultants help you navigate the entire process.
+              Edenz Consultant is Pakistan's leading study abroad consultancy, helping students with university admissions, visa processing, and test preparation for IELTS, PTE, TOEFL, GRE, GMAT and more.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
