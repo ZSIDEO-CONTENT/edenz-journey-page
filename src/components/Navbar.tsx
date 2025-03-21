@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, ChevronDown } from 'lucide-react';
 
@@ -33,34 +34,36 @@ const Navbar = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <a href="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <span className="text-primary font-bold text-2xl">Edenz</span>
               <span className="text-foreground font-medium">Consultant</span>
-            </a>
+            </Link>
           </div>
 
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#" className="nav-link">Home</a>
+            <Link to="/" className="nav-link">Home</Link>
             <div className="relative group">
               <button className="nav-link flex items-center">
                 Services
                 <ChevronDown className="ml-1 h-4 w-4" />
               </button>
               <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 p-2 transform origin-top-left">
-                <a href="#" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Study Abroad Counseling</a>
-                <a href="#" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Visa Assistance</a>
-                <a href="#" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">University Applications</a>
-                <a href="#" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Test Preparation</a>
+                <Link to="/services" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Study Abroad Counseling</Link>
+                <Link to="/services" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Visa Assistance</Link>
+                <Link to="/services" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">University Applications</Link>
+                <Link to="/services" className="block px-4 py-2 text-sm hover:bg-edenz-light rounded-md">Test Preparation</Link>
               </div>
             </div>
-            <a href="#" className="nav-link">Destinations</a>
-            <a href="#" className="nav-link">About Us</a>
-            <a href="#" className="nav-link">Success Stories</a>
-            <a href="#" className="nav-link">Contact</a>
+            <Link to="/countries" className="nav-link">Destinations</Link>
+            <Link to="/about" className="nav-link">About Us</Link>
+            <Link to="/" className="nav-link">Success Stories</Link>
+            <Link to="/contact" className="nav-link">Contact</Link>
           </nav>
 
           <div className="hidden md:block">
-            <Button className="btn-primary">Book Consultation</Button>
+            <Link to="/contact">
+              <Button className="btn-primary">Book Consultation</Button>
+            </Link>
           </div>
 
           <button onClick={toggleMobileMenu} className="md:hidden text-gray-700">
@@ -78,14 +81,16 @@ const Navbar = () => {
         mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 invisible'
       } overflow-hidden`}>
         <div className="container mx-auto px-4 py-3 space-y-3">
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Home</a>
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Services</a>
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Destinations</a>
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">About Us</a>
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Success Stories</a>
-          <a href="#" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Contact</a>
+          <Link to="/" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Home</Link>
+          <Link to="/services" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Services</Link>
+          <Link to="/countries" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Destinations</Link>
+          <Link to="/about" className="block py-2 px-4 hover:bg-edenz-light rounded-md">About Us</Link>
+          <Link to="/" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Success Stories</Link>
+          <Link to="/contact" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Contact</Link>
           <div className="pt-2 pb-4">
-            <Button className="btn-primary w-full">Book Consultation</Button>
+            <Link to="/contact">
+              <Button className="btn-primary w-full">Book Consultation</Button>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 const destinations = [
@@ -71,18 +72,22 @@ const Destinations = () => {
                 </div>
               </div>
               <div className="p-4 bg-white">
-                <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
-                  Explore
-                </Button>
+                <Link to="/countries">
+                  <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
+                    Explore
+                  </Button>
+                </Link>
               </div>
             </div>
           ))}
         </div>
         
         <div className="text-center mt-10">
-          <Button className="btn-primary">
-            View All Destinations
-          </Button>
+          <Link to="/countries">
+            <Button className="btn-primary">
+              View All Destinations
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
