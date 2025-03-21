@@ -31,6 +31,34 @@ const destinations = [
     universities: 30,
     courses: 2500
   },
+  {
+    id: 5,
+    name: 'Germany',
+    image: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b',
+    universities: 45,
+    courses: 2800
+  },
+  {
+    id: 6,
+    name: 'New Zealand',
+    image: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9',
+    universities: 25,
+    courses: 1800
+  },
+  {
+    id: 7,
+    name: 'Ireland',
+    image: 'https://images.unsplash.com/photo-1590089415225-401ed6a9a89e',
+    universities: 22,
+    courses: 1500
+  },
+  {
+    id: 8,
+    name: 'Sweden',
+    image: 'https://images.unsplash.com/photo-1509356843151-3e7d96241e11',
+    universities: 18,
+    courses: 1200
+  },
 ];
 
 const Destinations = () => {
@@ -39,13 +67,16 @@ const Destinations = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center mb-16">
           <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-            Study Destinations
+            Global Education Solutions
           </div>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             Top Study Abroad Destinations
           </h2>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg mb-4">
             Explore popular countries for international education with world-class universities and diverse courses.
+          </p>
+          <p className="text-gray-600 text-lg">
+            At Edenz Consultant, we provide comprehensive education consultancy services for students aspiring to study anywhere in the world. Beyond the destinations shown below, we assist with admissions to universities in over 30 countries globally.
           </p>
         </div>
         
@@ -83,6 +114,11 @@ const Destinations = () => {
         </div>
         
         <div className="text-center mt-10">
+          <div className="max-w-3xl mx-auto mb-6">
+            <p className="text-gray-600 italic">
+              Don't see your preferred destination? We also provide consultancy services for Japan, Singapore, Malaysia, France, Italy, Spain, Netherlands, and many more countries. Contact us for personalized guidance!
+            </p>
+          </div>
           <Link to="/countries">
             <Button className="btn-primary">
               View All Destinations

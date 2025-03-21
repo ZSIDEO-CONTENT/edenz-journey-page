@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Building, GraduationCap, Clock, Calendar, DollarSign } from 'lucide-react';
+import { Building, GraduationCap, Clock, Calendar, DollarSign, Globe } from 'lucide-react';
 
 const countries = [
   {
@@ -114,6 +113,60 @@ const countries = [
     averageTuition: "CAD 20,000 - CAD 40,000 per year",
     applicationDeadlines: "January-February (Fall intake), September-October (Winter intake)",
     visaRequirements: "Study Permit with Acceptance Letter and proof of financial support"
+  },
+  {
+    id: "germany",
+    name: "Germany",
+    image: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b",
+    universities: 45,
+    courses: 2800,
+    description: "Germany offers world-class education with minimal to no tuition fees at public universities, making it an excellent destination for international students seeking quality education.",
+    features: [
+      "Free or low-cost tuition at public universities",
+      "Strong emphasis on research and innovation",
+      "Growing number of English-taught programs",
+      "18-month post-study work visa",
+      "Strong economy with internship and job opportunities",
+      "High quality of life and affordable living costs"
+    ],
+    topUniversities: [
+      "Technical University of Munich",
+      "Ludwig Maximilian University of Munich",
+      "Heidelberg University",
+      "Humboldt University of Berlin",
+      "RWTH Aachen University",
+      "Free University of Berlin"
+    ],
+    averageTuition: "€0 - €3,000 per year",
+    applicationDeadlines: "Winter Semester: July 15, Summer Semester: January 15",
+    visaRequirements: "Student Visa with proof of financial resources (€10,332 per year) and admission letter"
+  },
+  {
+    id: "newZealand",
+    name: "New Zealand",
+    image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9",
+    universities: 25,
+    courses: 1800,
+    description: "New Zealand offers a world-class education system with a focus on research and practical skills, all within a safe, welcoming environment with stunning natural beauty.",
+    features: [
+      "Globally recognized qualifications with practical, hands-on learning",
+      "Safe, welcoming environment with excellent quality of life",
+      "Post-study work visa for up to 3 years",
+      "Opportunities to work while studying (up to 20 hours per week)",
+      "Beautiful natural landscapes and outdoor lifestyle",
+      "Strong support services for international students"
+    ],
+    topUniversities: [
+      "University of Auckland",
+      "University of Otago",
+      "Victoria University of Wellington",
+      "University of Canterbury",
+      "Massey University",
+      "Auckland University of Technology"
+    ],
+    averageTuition: "NZD 22,000 - NZD 35,000 per year",
+    applicationDeadlines: "February (Semester 1), July (Semester 2)",
+    visaRequirements: "Student Visa with proof of funds, acceptance letter, and return airfare"
   }
 ];
 
@@ -131,13 +184,29 @@ const Countries = () => {
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                Study Destinations
+                Global Education Solutions
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
                 Explore Top Study Abroad Destinations
               </h1>
-              <p className="text-gray-600 text-lg">
+              <p className="text-gray-600 text-lg mb-4">
                 Discover the perfect country for your international education journey with our comprehensive guide to top study destinations.
+              </p>
+              <p className="text-gray-600 text-lg">
+                At Edenz Consultant, we provide extensive support for students aspiring to study in any country worldwide. Our expertise extends beyond the featured destinations below to include consultancy services for over 30 countries globally.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Global Coverage Banner */}
+        <section className="py-6 bg-primary/10 mb-10">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-center gap-3">
+              <Globe className="text-primary h-6 w-6" />
+              <p className="text-gray-700 font-medium">
+                We provide education consultancy services for students aspiring to study anywhere in the world. 
+                <span className="hidden md:inline"> Contact us about any country not listed here.</span>
               </p>
             </div>
           </div>

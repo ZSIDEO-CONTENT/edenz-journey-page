@@ -8,7 +8,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           <div>
             <div className="flex items-center mb-6">
-              <span className="text-primary font-bold text-2xl">Edenz</span>
+              <span className="text-primary font-bold text-2xl mr-1">Edenz</span>
               <span className="font-medium">Consultant</span>
             </div>
             <p className="text-gray-400 mb-6">
@@ -49,6 +49,7 @@ const Footer = () => {
               <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Australia</a></li>
               <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Canada</a></li>
               <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">Germany</a></li>
+              <li><a href="#" className="text-gray-400 hover:text-primary transition-colors">New Zealand</a></li>
             </ul>
           </div>
           
@@ -56,15 +57,15 @@ const Footer = () => {
             <h3 className="text-lg font-bold mb-6">Contact Us</h3>
             <ul className="space-y-4">
               <li className="flex items-start">
-                <MapPin className="h-5 w-5 text-primary mr-3 mt-1" />
+                <MapPin className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
                 <span className="text-gray-400">123 Education Street, Gulberg III, Lahore, Pakistan</span>
               </li>
               <li className="flex items-center">
-                <Phone className="h-5 w-5 text-primary mr-3" />
+                <Phone className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 <span className="text-gray-400">+92 42 1234 5678</span>
               </li>
               <li className="flex items-center">
-                <Mail className="h-5 w-5 text-primary mr-3" />
+                <Mail className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 <span className="text-gray-400">contact@edenzconsultant.org</span>
               </li>
             </ul>
