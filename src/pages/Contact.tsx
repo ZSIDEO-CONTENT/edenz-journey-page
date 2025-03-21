@@ -5,9 +5,13 @@ import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from '@/components/ui/use-toast';
 import { Phone, Mail, MapPin, Clock, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { submitContactForm } from '@/lib/api';
 
 const Contact = () => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,12 +27,13 @@ const Contact = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      await submitContactForm(formData);
+      
       setIsSubmitting(false);
       setSubmitSuccess(true);
       setFormData({
@@ -42,7 +47,17 @@ const Contact = () => {
       setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
-    }, 1500);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setIsSubmitting(false);
+      
+      toast({
+        title: "Form Submission Failed",
+        description: "There was an error submitting your message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -206,10 +221,12 @@ const Contact = () => {
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <h3 className="font-semibold text-lg mb-4">Book a Consultation</h3>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Button className="flex items-center gap-2 bg-primary">
-                      <Calendar className="h-5 w-5" />
-                      Book a Free Consultation
-                    </Button>
+                    <Link to="/book-consultation">
+                      <Button className="flex items-center gap-2 bg-primary">
+                        <Calendar className="h-5 w-5" />
+                        Book a Free Consultation
+                      </Button>
+                    </Link>
                     <Button variant="outline" className="flex items-center gap-2 border-primary text-primary">
                       <Phone className="h-5 w-5" />
                       Request a Callback

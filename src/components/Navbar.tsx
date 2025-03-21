@@ -61,7 +61,7 @@ const Navbar = () => {
           </nav>
 
           <div className="hidden md:block">
-            <Link to="/contact">
+            <Link to="/book-consultation">
               <Button className="btn-primary">Book Consultation</Button>
             </Link>
           </div>
@@ -88,7 +88,7 @@ const Navbar = () => {
           <Link to="/" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Success Stories</Link>
           <Link to="/contact" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Contact</Link>
           <div className="pt-2 pb-4">
-            <Link to="/contact">
+            <Link to="/book-consultation">
               <Button className="btn-primary w-full">Book Consultation</Button>
             </Link>
           </div>

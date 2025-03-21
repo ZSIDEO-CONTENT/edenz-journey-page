@@ -1,6 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { GraduationCap, Phone, Mail, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CTA = () => {
   return (
@@ -21,18 +22,20 @@ const CTA = () => {
               <div className="space-y-4">
                 <div className="flex items-center text-white">
                   <Phone className="h-5 w-5 mr-3" />
-                  <span>+1 234 567 890</span>
+                  <span>+92 42 1234 5678</span>
                 </div>
                 <div className="flex items-center text-white">
                   <Mail className="h-5 w-5 mr-3" />
-                  <span>contact@edenzconsultant.com</span>
+                  <span>contact@edenzconsultant.org</span>
                 </div>
               </div>
               
               <div className="mt-10">
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg transition-all hover:-translate-y-1">
-                  <Calendar className="h-5 w-5 mr-2" /> Book Consultation
-                </Button>
+                <Link to="/book-consultation">
+                  <Button size="lg" className="bg-white text-primary hover:bg-white/90 shadow-lg transition-all hover:-translate-y-1">
+                    <Calendar className="h-5 w-5 mr-2" /> Book Consultation
+                  </Button>
+                </Link>
               </div>
             </div>
             
