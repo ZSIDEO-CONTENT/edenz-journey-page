@@ -32,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { submitConsultationBooking } from '@/lib/api';
+import { submitConsultationBooking, ConsultationBookingData } from '@/lib/api';
 
 // Define the form schema
 const formSchema = z.object({
@@ -91,7 +91,19 @@ const BookConsultation = () => {
     setIsSubmitting(true);
     
     try {
-      await submitConsultationBooking(data);
+      // Ensure all required fields are present in the data before submitting
+      const bookingData: ConsultationBookingData = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        preferredDate: data.preferredDate,
+        preferredTime: data.preferredTime,
+        service: data.service,
+        destination: data.destination,
+        message: data.message
+      };
+      
+      await submitConsultationBooking(bookingData);
       
       toast({
         title: "Consultation Booked",

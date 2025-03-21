@@ -17,8 +17,8 @@ export interface ConsultationBookingData {
   phone: string;
   preferredDate: Date;
   preferredTime: string;
-  destination?: string;
   service: string;
+  destination?: string;
   message?: string;
 }
 
