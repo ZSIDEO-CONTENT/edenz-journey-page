@@ -54,7 +54,8 @@ const Hero = () => {
           </div>
           
           <div className="relative animate-fade-in animation-delay-300">
-            <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl animate-slide-left">
+            {/* Main image with lower z-index */}
+            <div className="relative z-0 rounded-3xl overflow-hidden shadow-2xl animate-slide-left">
               <img 
                 src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070" 
                 alt="Students studying abroad" 
@@ -69,8 +70,8 @@ const Hero = () => {
               </div>
             </div>
             
-            {/* Floating elements */}
-            <div className="absolute top-10 -left-14 glass-card rounded-2xl p-4 shadow-lg animate-float">
+            {/* Floating elements with higher z-index */}
+            <div className="absolute top-10 -left-14 glass-card rounded-2xl p-4 shadow-lg animate-float z-10">
               <div className="flex items-center gap-3">
                 <div className="bg-edenz-green/10 rounded-full p-2">
                   <GraduationCap className="h-6 w-6 text-primary" />
@@ -82,7 +83,7 @@ const Hero = () => {
               </div>
             </div>
             
-            <div className="absolute bottom-20 -right-10 glass-card rounded-2xl p-4 shadow-lg animate-float animation-delay-1000">
+            <div className="absolute bottom-20 -right-10 glass-card rounded-2xl p-4 shadow-lg animate-float animation-delay-1000 z-10">
               <div className="flex items-center gap-3">
                 <div className="bg-edenz-green/10 rounded-full p-2">
                   <Globe className="h-6 w-6 text-primary" />
