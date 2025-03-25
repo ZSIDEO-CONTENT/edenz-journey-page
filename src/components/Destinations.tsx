@@ -27,7 +27,7 @@ const destinations = [
   {
     id: 4,
     name: 'Canada',
-    image: 'https://images.unsplash.com/photo-1569681157442-5cd435fbcd65',
+    image: 'https://www.shutterstock.com/image-photo/beautiful-aerial-view-downtown-vancouver-600nw-2244151975.jpg',
     universities: 30,
     courses: 2500
   },
@@ -48,7 +48,7 @@ const destinations = [
   {
     id: 7,
     name: 'Ireland',
-    image: 'https://images.unsplash.com/photo-1590089415225-401ed6a9a89e',
+    image: 'https://media.istockphoto.com/id/641736118/photo/houses-and-catherdral-in-cobh-ireland.jpg?s=612x612&w=0&k=20&c=dTQbo6doEK9vJyW1MnOy67q-WtH8Odnkd1SY0UpNgV0=',
     universities: 22,
     courses: 1500
   },
