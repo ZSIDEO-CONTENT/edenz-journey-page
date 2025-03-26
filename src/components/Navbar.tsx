@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,8 +34,8 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-primary font-medium mr-1">Edenz</span>
-              <span className="text-foreground font-medium">Consultant</span>
+              <span className="text-primary font-bold mr-1">Edenz</span>
+              <span className="text-foreground font-bold">Consultant</span>
             </Link>
           </div>
 
@@ -76,7 +75,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div className={`md:hidden absolute w-full bg-white shadow-lg transition-all duration-300 ease-in-out ${
         mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 invisible'
       } overflow-hidden`}>
