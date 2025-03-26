@@ -10,6 +10,7 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from '@/components/ui/sheet';
+import { sendChatMessage } from '@/lib/api';
 
 interface Message {
   content: string;
@@ -22,29 +23,47 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState<Message[]>([
     { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!message.trim()) return;
+    if (!message.trim() || isLoading) return;
     
     // Add user message
     const userMessage: Message = { content: message, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
-    setMessage('');
     
-    // Simulate bot response
-    setTimeout(() => {
+    // Clear input and set loading
+    const userInput = message;
+    setMessage('');
+    setIsLoading(true);
+    
+    try {
+      // Send message to API
+      const response = await sendChatMessage(userInput);
+      
+      // Add bot response
       const botMessage: Message = { 
-        content: "Thank you for reaching out! I'm here to help with any questions about studying abroad. Our counselors are also available for a personal consultation if you'd like more detailed information.",
+        content: response,
         sender: 'bot'
       };
       setMessages(prev => [...prev, botMessage]);
-    }, 1000);
+    } catch (error) {
+      console.error('Error in chat:', error);
+      // Add error message
+      const errorMessage: Message = { 
+        content: "I'm sorry, I encountered an error. Please try again later.",
+        sender: 'bot'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="fixed bottom-5 left-5 z-50">
+    <div className="fixed bottom-5 right-5 z-50">
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button 
@@ -54,7 +73,7 @@ const ChatWidget = () => {
             <MessageCircle className="h-6 w-6 text-white" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="sm:max-w-[400px] h-[500px] rounded-t-xl mx-auto sm:ml-4 mb-0 p-0 border border-primary/20 shadow-xl">
+        <SheetContent side="bottom" className="sm:max-w-[400px] h-[500px] rounded-t-xl mx-auto sm:mr-4 mb-0 p-0 border border-primary/20 shadow-xl">
           <div className="flex flex-col h-full">
             <SheetHeader className="bg-primary text-primary-foreground p-4 rounded-t-xl flex flex-row justify-between items-center">
               <SheetTitle className="text-left text-white">Chat with Edenz AI</SheetTitle>
@@ -85,6 +104,15 @@ const ChatWidget = () => {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary text-foreground p-3 rounded-xl rounded-tl-none max-w-[85%] flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <form onSubmit={handleSendMessage} className="border-t p-3 flex gap-2">
@@ -94,8 +122,14 @@ const ChatWidget = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="flex-1"
+                disabled={isLoading}
               />
-              <Button type="submit" size="icon" className="bg-primary text-white">
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="bg-primary text-white"
+                disabled={isLoading}
+              >
                 <Send className="h-5 w-5" />
               </Button>
             </form>

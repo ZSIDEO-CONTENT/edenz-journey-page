@@ -73,3 +73,29 @@ export const submitConsultationBooking = async (data: ConsultationBookingData): 
     }, 1500);
   });
 };
+
+/**
+ * Send a message to the chat API
+ */
+export const sendChatMessage = async (message: string): Promise<string> => {
+  try {
+    // For development, you may need to update this URL based on where your FastAPI server is running
+    const response = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
+    
+    const data = await response.json();
+    return data.response;
+  } catch (error) {
+    console.error('Error sending chat message:', error);
+    return "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again later.";
+  }
+};
