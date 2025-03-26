@@ -1,10 +1,20 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import json
 import os
+import uuid
+from datetime import datetime
+import supabase
+from crewai import Agent, Task, Crew, Process
+from langchain.llms import Ollama
+
+# Initialize Supabase client
+supabase_url = os.getenv("SUPABASE_URL", "https://your-supabase-url.supabase.co")
+supabase_key = os.getenv("SUPABASE_KEY", "your-supabase-key")
+supabase_client = supabase.create_client(supabase_url, supabase_key)
 
 app = FastAPI(title="Edenz AI Chat API")
 
@@ -20,58 +30,114 @@ app.add_middleware(
 class ChatMessage(BaseModel):
     content: str
     sender: str
+    timestamp: Optional[datetime] = None
+    session_id: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: Optional[str] = None
 
-# Simple response templates - in a real app, this would be more sophisticated
-responses = {
-    "greeting": [
-        "Hello! I'm Edenz AI. How can I help with your study abroad journey?",
-        "Hi there! I'm here to assist with all your study abroad questions."
-    ],
-    "about_edenz": [
-        "Edenz Consultants is a leading education consultancy specializing in helping students pursue their dreams of studying abroad.",
-        "We at Edenz Consultants have helped thousands of students achieve their international education goals."
-    ],
-    "countries": [
-        "We assist with applications to universities in over 50 countries including the UK, USA, Canada, Australia, and New Zealand.",
-        "Edenz supports study programs in more than 50 countries worldwide. Our most popular destinations include the UK, USA, Canada, and Australia."
-    ],
-    "services": [
-        "Our services include university selection, application assistance, visa guidance, and pre-departure support.",
-        "We offer comprehensive services including course selection, university applications, visa processing, and pre-departure orientation."
-    ],
-    "consultation": [
-        "You can book a consultation with our experts through our website or by calling our office. Would you like me to help you schedule one?",
-        "Our counselors are available for personal consultations. Would you like to book an appointment?"
-    ],
-    "default": [
-        "Thank you for your question. Our education counselors can provide more detailed information. Would you like to book a consultation?",
-        "That's a great question. For more personalized advice, I recommend speaking with one of our education experts. Can I help you book a consultation?"
-    ]
-}
+class ChatResponse(BaseModel):
+    response: str
+    session_id: str
+    success: bool
 
-def get_response_category(message: str) -> str:
-    """
-    Simple intent detection - in a real app, this would use a more sophisticated NLP model
-    """
+# Initialize the language model
+try:
+    llm = Ollama(model="llama2") # You can replace with any other open source model
+except:
+    # Fallback for testing if Ollama is not available
+    from langchain.llms import OpenAI
+    llm = OpenAI(api_key="dummy")
+
+# Create the Edenz Consultant agent
+edenz_agent = Agent(
+    role="Study Abroad Education Consultant",
+    goal="Help students find the best study abroad opportunities",
+    backstory="""You are an AI assistant for Edenz Consultants, a leading education consultancy 
+    specializing in helping students pursue their dreams of studying abroad. You have extensive knowledge 
+    about university programs, visa requirements, scholarship opportunities, and the application process 
+    for studying in countries like the UK, USA, Canada, Australia, and New Zealand.
+    You are friendly, knowledgeable, and always focused on providing accurate information to help 
+    students make informed decisions about their education abroad.""",
+    verbose=True,
+    llm=llm,
+    allow_delegation=False
+)
+
+def save_chat_to_db(session_id: str, message: str, response: str) -> None:
+    """Save chat messages to Supabase database"""
+    try:
+        # Save user message
+        supabase_client.table("chat_messages").insert({
+            "session_id": session_id,
+            "content": message,
+            "sender": "user",
+            "timestamp": datetime.now().isoformat()
+        }).execute()
+        
+        # Save bot response
+        supabase_client.table("chat_messages").insert({
+            "session_id": session_id,
+            "content": response,
+            "sender": "bot",
+            "timestamp": datetime.now().isoformat()
+        }).execute()
+    except Exception as e:
+        print(f"Error saving to database: {str(e)}")
+
+def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
+    """Retrieve chat history from Supabase database"""
+    try:
+        response = supabase_client.table("chat_messages").select("*").eq("session_id", session_id).order("timestamp").execute()
+        return response.data
+    except Exception as e:
+        print(f"Error retrieving chat history: {str(e)}")
+        return []
+
+def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) -> str:
+    """Generate response using Crew AI agent"""
+    try:
+        # Create a task for the agent
+        task = Task(
+            description=f"Respond to the user message: '{message}'. Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with an Edenz education expert.",
+            agent=edenz_agent
+        )
+        
+        # Create a crew with just our agent
+        crew = Crew(
+            agents=[edenz_agent],
+            tasks=[task],
+            process=Process.sequential,
+            verbose=True
+        )
+        
+        # Get the result
+        result = crew.kickoff()
+        return result
+    except Exception as e:
+        print(f"Error generating agent response: {str(e)}")
+        return fallback_response(message)
+
+def fallback_response(message: str) -> str:
+    """Fallback response when AI agent fails"""
+    # Simple intent detection for fallback
     message = message.lower()
     
     if any(word in message for word in ["hello", "hi", "hey", "greetings"]):
-        return "greeting"
+        return "Hello! I'm Edenz AI. How can I help with your study abroad journey?"
     elif any(word in message for word in ["about", "who", "what is", "edenz"]):
-        return "about_edenz"
+        return "Edenz Consultants is a leading education consultancy specializing in helping students pursue their dreams of studying abroad."
     elif any(word in message for word in ["country", "countries", "where", "location", "study in"]):
-        return "countries"
+        return "We assist with applications to universities in over 50 countries including the UK, USA, Canada, Australia, and New Zealand."
     elif any(word in message for word in ["service", "offer", "help", "assist", "provide"]):
-        return "services"
+        return "Our services include university selection, application assistance, visa guidance, and pre-departure support."
     elif any(word in message for word in ["book", "consult", "appointment", "schedule", "talk", "expert"]):
-        return "consultation"
+        return "You can book a consultation with our experts through our website or by calling our office. Would you like me to help you schedule one?"
     else:
-        return "default"
+        return "Thank you for your question. Our education counselors can provide more detailed information. Would you like to book a consultation?"
 
-@app.post("/chat", response_model=Dict[str, Any])
+@app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
     Process a chat message and return a response
@@ -80,15 +146,32 @@ async def chat(request: ChatRequest):
         if not request.message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
         
-        category = get_response_category(request.message)
-        import random
-        response = random.choice(responses[category])
+        # Use provided session_id or generate a new one
+        session_id = request.session_id or str(uuid.uuid4())
+        
+        # Get chat history if session_id exists
+        history = get_chat_history(session_id) if request.session_id else []
+        
+        # Generate response
+        try:
+            response = generate_agent_response(request.message, history)
+        except Exception as e:
+            print(f"Agent error: {str(e)}")
+            response = fallback_response(request.message)
+        
+        # Save to database
+        try:
+            save_chat_to_db(session_id, request.message, response)
+        except Exception as e:
+            print(f"Database error: {str(e)}")
         
         return {
             "response": response,
+            "session_id": session_id,
             "success": True
         }
     except Exception as e:
+        print(f"General error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
@@ -97,6 +180,14 @@ async def health_check():
     Simple health check endpoint
     """
     return {"status": "healthy", "service": "Edenz AI Chat API"}
+
+@app.get("/chat/history/{session_id}")
+async def get_chat_session(session_id: str):
+    """
+    Get chat history for a session
+    """
+    history = get_chat_history(session_id)
+    return {"session_id": session_id, "messages": history}
 
 # Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
