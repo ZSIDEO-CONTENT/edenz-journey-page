@@ -12,8 +12,8 @@ from crewai import Agent, Task, Crew, Process
 from langchain.llms import Ollama
 
 # Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL", "https://your-supabase-url.supabase.co")
-supabase_key = os.getenv("SUPABASE_KEY", "your-supabase-key")
+supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
+supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
 supabase_client = supabase.create_client(supabase_url, supabase_key)
 
 app = FastAPI(title="Edenz AI Chat API")
