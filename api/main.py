@@ -9,8 +9,8 @@ import uuid
 from datetime import datetime
 import supabase
 from crewai import Agent, Task, Crew, Process
-from langchain.llms import Ollama
-
+from langchain.llms import Together
+llm = Together(model="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free", together_api_key="tgp_v1_2OqWLQjUGqjzNIoBqr9XSk0mSvT8knu2TtbJM-aiL0Y")
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
@@ -43,14 +43,14 @@ class ChatResponse(BaseModel):
     success: bool
 
 # Initialize the language model
-try:
-    llm = Ollama(model="llama2") # You can replace with any other open source model
-except:
-    # Fallback for testing if Ollama is not available
-    from langchain.llms import OpenAI
-    llm = OpenAI(api_key="dummy")
+# llm = HuggingFaceHub(
+#     repo_id="Qwen/Qwen2.5-Omni-7B", 
+#     model_kwargs={"temperature": 0.7, "max_length": 512}, 
+#     huggingfacehub_api_token=huggingface_api_key
+# )
 
 # Create the Edenz Consultant agent
+
 edenz_agent = Agent(
     role="Study Abroad Education Consultant",
     goal="Help students find the best study abroad opportunities",
@@ -61,8 +61,8 @@ edenz_agent = Agent(
     You are friendly, knowledgeable, and always focused on providing accurate information to help 
     students make informed decisions about their education abroad.""",
     verbose=True,
-    llm=llm,
-    allow_delegation=False
+    allow_delegation=False,
+    llm=llm
 )
 
 def save_chat_to_db(session_id: str, message: str, response: str) -> None:
