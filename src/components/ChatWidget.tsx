@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,20 +9,17 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from '@/components/ui/sheet';
-import { sendChatMessage } from '@/lib/api';
-
-interface Message {
-  content: string;
-  sender: 'user' | 'bot';
-}
+import { sendChatMessage, ChatMessage, getChatHistory } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of messages
@@ -33,13 +29,38 @@ const ChatWidget = () => {
     }
   }, [messages]);
 
+  // Fetch chat history when widget opens
+  useEffect(() => {
+    if (isOpen && !isInitialized) {
+      loadChatHistory();
+    }
+  }, [isOpen, isInitialized]);
+
+  const loadChatHistory = async () => {
+    try {
+      setIsLoading(true);
+      const history = await getChatHistory();
+      
+      if (history && history.length > 0) {
+        setMessages(history);
+      }
+      
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      // Keep default welcome message
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!message.trim() || isLoading) return;
     
     // Add user message
-    const userMessage: Message = { content: message, sender: 'user' };
+    const userMessage: ChatMessage = { content: message, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
     // Clear input and set loading
@@ -52,7 +73,7 @@ const ChatWidget = () => {
       const response = await sendChatMessage(userInput);
       
       // Add bot response
-      const botMessage: Message = { 
+      const botMessage: ChatMessage = { 
         content: response,
         sender: 'bot'
       };
@@ -60,11 +81,17 @@ const ChatWidget = () => {
     } catch (error) {
       console.error('Error in chat:', error);
       // Add error message
-      const errorMessage: Message = { 
-        content: "I'm sorry, I encountered an error. Please try again later.",
+      const errorMessage: ChatMessage = { 
+        content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again later or contact us directly through the contact form.",
         sender: 'bot'
       };
       setMessages(prev => [...prev, errorMessage]);
+      
+      toast({
+        title: "Connection Error",
+        description: "Couldn't connect to the chat server. Please try again later.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

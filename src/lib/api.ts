@@ -96,6 +96,47 @@ const getChatSessionId = (): string => {
   return sessionId;
 };
 
+// Fallback responses when API is unavailable
+const fallbackResponses = [
+  "I'm here to help you with your study abroad journey. What specific country or program are you interested in?",
+  "Edenz Consultants can help you with university selection, visa guidance, and the entire application process. Would you like to know more about any specific aspect?",
+  "We specialize in helping students study in the UK, USA, Canada, Australia, and New Zealand. Which country interests you the most?",
+  "Our expert counselors can provide personalized guidance for your specific situation. Would you like to book a consultation?",
+  "Many of our students have successfully secured scholarships. Your academic background and the destination country are key factors in scholarship eligibility.",
+  "I'm having trouble connecting to my full knowledge base, but I'd be happy to arrange a call with one of our education experts who can answer all your questions in detail."
+];
+
+/**
+ * Get a random fallback response
+ */
+const getFallbackResponse = (message: string): string => {
+  // Simple intent detection for better fallbacks
+  const messageText = message.toLowerCase();
+  
+  if (messageText.includes('hello') || messageText.includes('hi') || messageText.includes('hey')) {
+    return "Hello! I'm Edenz AI. How can I help with your study abroad plans today?";
+  }
+  
+  if (messageText.includes('scholarship') || messageText.includes('fund') || messageText.includes('financial')) {
+    return "Scholarships vary by country and institution. Many universities offer merit-based scholarships for international students with strong academic records. Would you like to know about specific scholarship opportunities?";
+  }
+  
+  if (messageText.includes('visa') || messageText.includes('permit')) {
+    return "Visa requirements differ by country. We provide comprehensive visa application support, including document preparation and interview coaching. Which country's visa process would you like to know more about?";
+  }
+  
+  if (messageText.includes('cost') || messageText.includes('fee') || messageText.includes('expensive')) {
+    return "Tuition and living costs vary significantly by country and city. Generally, studying in the US tends to be more expensive than the UK, Canada, or Australia. Would you like a cost breakdown for a specific destination?";
+  }
+  
+  if (messageText.includes('test') || messageText.includes('ielts') || messageText.includes('toefl') || messageText.includes('gre') || messageText.includes('gmat')) {
+    return "Most English-speaking universities require English proficiency tests like IELTS or TOEFL. Graduate programs might also require GRE or GMAT. We can help you prepare for these tests and understand the specific requirements for your chosen programs.";
+  }
+  
+  // Default to a random response if no specific intent is detected
+  return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+};
+
 /**
  * Send a message to the chat API
  */
@@ -105,6 +146,8 @@ export const sendChatMessage = async (message: string): Promise<string> => {
     
     // Get the API URL from environment or default to localhost in development
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    
+    console.log(`Sending message to ${apiUrl}/chat`);
     
     // Send the message to the FastAPI backend
     const response = await fetch(`${apiUrl}/chat`, {
@@ -119,7 +162,8 @@ export const sendChatMessage = async (message: string): Promise<string> => {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to send message');
+      console.error('API response not OK:', response.status, response.statusText);
+      throw new Error(`Failed to send message: ${response.statusText}`);
     }
     
     const data = await response.json();
@@ -132,7 +176,9 @@ export const sendChatMessage = async (message: string): Promise<string> => {
     return data.response;
   } catch (error) {
     console.error('Error sending chat message:', error);
-    return "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again later.";
+    
+    // Return a fallback response when API is unavailable
+    return getFallbackResponse(message);
   }
 };
 
@@ -161,6 +207,7 @@ export const getChatHistory = async (): Promise<ChatMessage[]> => {
     }));
   } catch (error) {
     console.error('Error getting chat history:', error);
+    // Return an empty array if history can't be fetched
     return [];
   }
 };
