@@ -54,6 +54,14 @@ const ChatWidget = () => {
     }
   };
 
+  // Help functions to detect booking patterns in the conversation
+  const detectBookingIntent = (userMessages: string[]): boolean => {
+    const bookingKeywords = ['book', 'consult', 'appointment', 'schedule', 'meet', 'talk'];
+    const lastFewMessages = userMessages.slice(-3).join(' ').toLowerCase();
+    
+    return bookingKeywords.some(keyword => lastFewMessages.includes(keyword));
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -78,6 +86,23 @@ const ChatWidget = () => {
         sender: 'bot'
       };
       setMessages(prev => [...prev, botMessage]);
+      
+      // Check if conversation is about booking
+      const userMessages = [...messages, userMessage]
+        .filter(msg => msg.sender === 'user')
+        .map(msg => msg.content);
+        
+      if (detectBookingIntent(userMessages) && !response.includes("booking has been confirmed")) {
+        // Optionally suggest a booking form for a smoother experience
+        if (Math.random() > 0.5 && !response.includes("booking")) {
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              content: "If you'd like to book a consultation, I can help you with that. Just let me know your name, email, phone number, and when you'd prefer to meet.",
+              sender: 'bot'
+            }]);
+          }, 1000);
+        }
+      }
     } catch (error) {
       console.error('Error in chat:', error);
       // Add error message

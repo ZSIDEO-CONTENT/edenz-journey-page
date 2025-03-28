@@ -28,6 +28,25 @@ export interface ChatMessage {
   timestamp?: string;
 }
 
+export interface AdminCredentials {
+  username: string;
+  password: string;
+}
+
+export interface Consultation {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  date: string;
+  time: string;
+  service?: string;
+  message?: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  created_at: string;
+  session_id?: string;
+}
+
 /**
  * Submits contact form data
  */
@@ -82,6 +101,7 @@ export const submitConsultationBooking = async (data: ConsultationBookingData): 
 
 // Store chat session ID in localStorage
 const CHAT_SESSION_KEY = 'edenz_chat_session_id';
+const AUTH_TOKEN_KEY = 'edenz_admin_token';
 
 /**
  * Get or create a chat session ID
@@ -209,5 +229,102 @@ export const getChatHistory = async (): Promise<ChatMessage[]> => {
     console.error('Error getting chat history:', error);
     // Return an empty array if history can't be fetched
     return [];
+  }
+};
+
+/**
+ * Admin login 
+ */
+export const adminLogin = async (credentials: AdminCredentials): Promise<string> => {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Invalid username or password');
+    }
+    
+    const data = await response.json();
+    localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+    return data.access_token;
+  } catch (error) {
+    console.error('Error during login:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if user is logged in
+ */
+export const isAuthenticated = (): boolean => {
+  return localStorage.getItem(AUTH_TOKEN_KEY) !== null;
+};
+
+/**
+ * Logout admin
+ */
+export const logout = (): void => {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+};
+
+/**
+ * Get all consultations (admin only)
+ */
+export const getConsultations = async (): Promise<Consultation[]> => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/consultations`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get consultations');
+    }
+    
+    const data = await response.json();
+    return data.consultations;
+  } catch (error) {
+    console.error('Error getting consultations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update consultation status (admin only)
+ */
+export const updateConsultationStatus = async (consultationId: string, status: string): Promise<void> => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/consultations/${consultationId}?status=${status}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update consultation status');
+    }
+  } catch (error) {
+    console.error('Error updating consultation status:', error);
+    throw error;
   }
 };

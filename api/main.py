@@ -1,6 +1,7 @@
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import json
@@ -10,10 +11,25 @@ from datetime import datetime
 import supabase
 from crewai import Agent, Task, Crew, Process
 from langchain.chat_models import ChatOpenAI
+import re
 
 os.environ["OPENAI_API_KEY"] = "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"
 os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
 
+# Configure security
+security = HTTPBearer()
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+# Simple token verification for admin access
+def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return True
 
 llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
@@ -46,25 +62,40 @@ class ChatResponse(BaseModel):
     response: str
     session_id: str
     success: bool
+    action: Optional[str] = None
+    booking_data: Optional[Dict[str, Any]] = None
 
-# Initialize the language model
-# llm = HuggingFaceHub(
-#     repo_id="Qwen/Qwen2.5-Omni-7B", 
-#     model_kwargs={"temperature": 0.7, "max_length": 512}, 
-#     huggingfacehub_api_token=huggingface_api_key
-# )
+class ConsultationBooking(BaseModel):
+    name: str
+    email: str
+    phone: str
+    date: str
+    time: str
+    service: Optional[str] = None
+    message: Optional[str] = None
+    status: str = "pending"
+    created_at: Optional[datetime] = None
+    session_id: Optional[str] = None
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str
 
 # Create the Edenz Consultant agent
-
 edenz_agent = Agent(
     role="Study Abroad Education Consultant",
-    goal="Help students find the best study abroad opportunities",
+    goal="Help students find the best study abroad opportunities and book consultations",
     backstory="""You are an AI assistant for Edenz Consultants, a leading Pakistani education consultancy 
     specializing in helping students pursue their dreams of studying abroad. You have extensive knowledge 
     about university programs, visa requirements, scholarship opportunities, and the application process 
     for studying all around the world and dream destinations like UK, USA, Germany, Australia, France, Italy.
     You are friendly, knowledgeable, and always focused on providing accurate information to help 
-    students make informed decisions about their education abroad.""",
+    students make informed decisions about their education abroad. When users express interest in booking a consultation,
+    you should collect their name, email, phone number, preferred date, and time.""",
     verbose=True,
     allow_delegation=False,
     llm=llm
@@ -91,6 +122,18 @@ def save_chat_to_db(session_id: str, message: str, response: str) -> None:
     except Exception as e:
         print(f"Error saving to database: {str(e)}")
 
+def save_consultation_to_db(booking_data: Dict[str, Any]) -> None:
+    """Save consultation booking to Supabase database"""
+    try:
+        supabase_client.table("consultations").insert({
+            **booking_data,
+            "created_at": datetime.now().isoformat(),
+            "status": "pending"
+        }).execute()
+        print(f"Consultation saved: {booking_data}")
+    except Exception as e:
+        print(f"Error saving consultation: {str(e)}")
+
 def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
     """Retrieve chat history from Supabase database"""
     try:
@@ -100,12 +143,54 @@ def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
         print(f"Error retrieving chat history: {str(e)}")
         return []
 
-def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) -> str:
-    """Generate response using Crew AI agent"""
+def extract_booking_info(message: str, history: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Extract consultation booking information from the conversation
+    Returns None if not enough information is available
+    """
+    # Combine history and current message to analyze
+    combined_text = " ".join([msg["content"] for msg in history if msg["sender"] == "user"]) + " " + message
+    
+    # Look for booking intent
+    booking_intent = re.search(r'(book|schedule|appoint|consult|meet)', combined_text.lower())
+    if not booking_intent:
+        return None
+    
+    # Try to extract information
+    name_match = re.search(r'name\s?[is:]*\s?([A-Za-z\s]+)', combined_text)
+    email_match = re.search(r'[\w\.-]+@[\w\.-]+', combined_text)
+    phone_match = re.search(r'phone[:\s]*([+\d\s-]{10,})', combined_text) or re.search(r'(\+\d{1,3}[-\s]?\d{3,}[-\s]?\d{3,}[-\s]?\d{3,})', combined_text)
+    date_match = re.search(r'(date|day)[:\s]*([\w\s,]+\d{1,2}(?:st|nd|rd|th)?[\s,]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)?[\s,]*\d{4}?)', combined_text, re.IGNORECASE)
+    time_match = re.search(r'(time|hour)[:\s]*(\d{1,2}[:.]\d{2}\s*(?:am|pm|AM|PM)?|\d{1,2}\s*(?:am|pm|AM|PM))', combined_text, re.IGNORECASE)
+    
+    # If we have name and either email or phone, consider it a valid booking intent
+    if name_match and (email_match or phone_match):
+        booking_data = {
+            "name": name_match.group(1).strip() if name_match else "Unknown",
+            "email": email_match.group(0) if email_match else "",
+            "phone": phone_match.group(1).strip() if phone_match and len(phone_match.groups()) > 0 else "",
+            "date": date_match.group(2).strip() if date_match and len(date_match.groups()) > 1 else "",
+            "time": time_match.group(2).strip() if time_match and len(time_match.groups()) > 1 else "",
+            "message": message,
+        }
+        return booking_data
+    
+    return None
+
+def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) -> tuple:
+    """Generate response using Crew AI agent and check for consultation booking intent"""
     try:
+        # Check if this is a booking request
+        booking_data = extract_booking_info(message, history or [])
+        
         # Create a task for the agent
+        booking_prompt = ""
+        if booking_data and (not booking_data.get("date") or not booking_data.get("time")):
+            # If we detected booking intent but missing info
+            booking_prompt = ". The user wants to book a consultation but I need more information. Ask for missing details like name, email, phone, preferred date, and time."
+        
         task = Task(
-            description=f"Respond to the user message: '{message}'. Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with an Edenz education expert.",
+            description=f"Respond to the user message: '{message}'{booking_prompt}. Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with an Edenz education expert.",
             agent=edenz_agent
         )
         
@@ -119,10 +204,19 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
         
         # Get the result
         result = crew.kickoff()
-        return result
+        
+        # Check if we have complete booking data
+        if booking_data and booking_data.get("date") and booking_data.get("time"):
+            # We have complete booking data
+            return result, "booking_confirmed", booking_data
+        elif booking_data:
+            # We have partial booking data
+            return result, "booking_started", None
+        
+        return result, None, None
     except Exception as e:
         print(f"Error generating agent response: {str(e)}")
-        return fallback_response(message)
+        return fallback_response(message), None, None
 
 def fallback_response(message: str) -> str:
     """Fallback response when AI agent fails"""
@@ -138,7 +232,7 @@ def fallback_response(message: str) -> str:
     elif any(word in message for word in ["service", "offer", "help", "assist", "provide"]):
         return "Our services include university selection, application assistance, visa guidance, and pre-departure support."
     elif any(word in message for word in ["book", "consult", "appointment", "schedule", "talk", "expert"]):
-        return "You can book a consultation with our experts through our website or by calling our office. Would you like me to help you schedule one?"
+        return "You can book a consultation with our experts. Please provide your name, email, phone number, and preferred date and time."
     else:
         return "Thank you for your question. Our education counselors can provide more detailed information. Would you like to book a consultation?"
 
@@ -159,10 +253,18 @@ async def chat(request: ChatRequest):
         
         # Generate response
         try:
-            response = generate_agent_response(request.message, history)
+            response, action, booking_data = generate_agent_response(request.message, history)
+            
+            # Save consultation booking if confirmed
+            if action == "booking_confirmed" and booking_data:
+                booking_data["session_id"] = session_id
+                save_consultation_to_db(booking_data)
+                
+                # Add confirmation to response
+                response += "\n\nThank you! Your consultation has been booked. We'll confirm the details shortly."
         except Exception as e:
             print(f"Agent error: {str(e)}")
-            response = fallback_response(request.message)
+            response, action, booking_data = fallback_response(request.message), None, None
         
         # Save to database
         try:
@@ -173,7 +275,9 @@ async def chat(request: ChatRequest):
         return {
             "response": response,
             "session_id": session_id,
-            "success": True
+            "success": True,
+            "action": action,
+            "booking_data": booking_data
         }
     except Exception as e:
         print(f"General error: {str(e)}")
@@ -193,6 +297,46 @@ async def get_chat_session(session_id: str):
     """
     history = get_chat_history(session_id)
     return {"session_id": session_id, "messages": history}
+
+@app.post("/login", response_model=AdminLoginResponse)
+async def admin_login(request: AdminLoginRequest):
+    """
+    Admin login endpoint
+    """
+    if request.username == ADMIN_USERNAME and request.password == ADMIN_PASSWORD:
+        return {
+            "access_token": f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
+            "token_type": "bearer"
+        }
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+@app.get("/consultations", dependencies=[Depends(get_current_admin)])
+async def get_consultations():
+    """
+    Get all consultation bookings (admin only)
+    """
+    try:
+        response = supabase_client.table("consultations").select("*").order("created_at", desc=True).execute()
+        return {"consultations": response.data}
+    except Exception as e:
+        print(f"Error retrieving consultations: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/consultations/{booking_id}", dependencies=[Depends(get_current_admin)])
+async def update_consultation_status(booking_id: str, status: str):
+    """
+    Update consultation status (admin only)
+    """
+    try:
+        response = supabase_client.table("consultations").update({"status": status}).eq("id", booking_id).execute()
+        return {"success": True, "updated": response.data}
+    except Exception as e:
+        print(f"Error updating consultation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
