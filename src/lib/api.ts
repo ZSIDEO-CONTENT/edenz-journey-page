@@ -1,4 +1,3 @@
-
 /**
  * API utility functions for form submissions and chat
  */
@@ -31,6 +30,13 @@ export interface ChatMessage {
 export interface AdminCredentials {
   username: string;
   password: string;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  role: string;
+  created_at: string;
 }
 
 export interface Consultation {
@@ -345,6 +351,64 @@ export const updateConsultationStatus = async (consultationId: string, status: s
     }
   } catch (error) {
     console.error('Error updating consultation status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all admin users (admin only)
+ */
+export const getAdminUsers = async (): Promise<AdminUser[]> => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/admin/users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get admin users');
+    }
+    
+    const data = await response.json();
+    return data.users;
+  } catch (error) {
+    console.error('Error getting admin users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new admin user (admin only)
+ */
+export const createAdminUser = async (credentials: AdminCredentials): Promise<void> => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create admin user');
+    }
+  } catch (error) {
+    console.error('Error creating admin user:', error);
     throw error;
   }
 };

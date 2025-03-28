@@ -4,12 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { adminLogin } from "@/lib/api";
+import { adminLogin, isAuthenticated } from "@/lib/api";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -19,6 +20,13 @@ const formSchema = z.object({
 const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Check if already authenticated
+    if (isAuthenticated()) {
+      navigate("/admin/dashboard");
+    }
+  }, [navigate]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,6 +66,7 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
         <div className="text-center mb-6">
+          <ShieldAlert className="h-12 w-12 text-primary mx-auto mb-2" />
           <h1 className="text-2xl font-bold">Edenz Admin Portal</h1>
           <p className="text-gray-600">Please sign in to continue</p>
         </div>
@@ -104,6 +113,11 @@ const AdminLogin = () => {
             </Button>
           </form>
         </Form>
+        
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>Default credentials: admin / admin123</p>
+          <p className="mt-1">Configure your admin users in Supabase</p>
+        </div>
       </div>
     </div>
   );

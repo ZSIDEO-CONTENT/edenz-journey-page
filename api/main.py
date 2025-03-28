@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,12 +8,20 @@ import os
 import uuid
 from datetime import datetime
 import supabase
+import bcrypt
+import jwt
 from crewai import Agent, Task, Crew, Process
 from langchain.chat_models import ChatOpenAI
 import re
 
+# Load environment variables
 os.environ["OPENAI_API_KEY"] = "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"
 os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
+
+# JWT Configuration
+JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_MINUTES = 60 * 24  # 24 hours
 
 # Configure security
 security = HTTPBearer()
@@ -23,13 +30,26 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # Simple token verification for admin access
 def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if credentials.credentials != f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return True
+    try:
+        # First try JWT token
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return username
+    except jwt.PyJWTError:
+        # Fall back to simple token if JWT fails
+        if credentials.credentials != f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return ADMIN_USERNAME
 
 llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
@@ -84,6 +104,53 @@ class AdminLoginRequest(BaseModel):
 class AdminLoginResponse(BaseModel):
     access_token: str
     token_type: str
+
+class AdminUserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "admin"
+
+class AdminUser(BaseModel):
+    id: str
+    username: str
+    role: str
+    created_at: datetime
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash"""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def create_jwt_token(username: str) -> str:
+    """Create a JWT token for user authentication"""
+    payload = {
+        "sub": username,
+        "exp": datetime.utcnow() + datetime.timedelta(minutes=JWT_EXPIRATION_MINUTES)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def init_admin_user():
+    """Initialize default admin user if not exists"""
+    try:
+        # Check if admin user exists
+        response = supabase_client.table("admin_users").select("*").eq("username", ADMIN_USERNAME).execute()
+        if not response.data:
+            # Create default admin user
+            hashed_password = hash_password(ADMIN_PASSWORD)
+            supabase_client.table("admin_users").insert({
+                "username": ADMIN_USERNAME,
+                "password_hash": hashed_password,
+                "role": "admin",
+                "created_at": datetime.now().isoformat()
+            }).execute()
+            print(f"Created default admin user: {ADMIN_USERNAME}")
+    except Exception as e:
+        print(f"Error initializing admin user: {str(e)}")
 
 # Create the Edenz Consultant agent
 edenz_agent = Agent(
@@ -303,16 +370,38 @@ async def admin_login(request: AdminLoginRequest):
     """
     Admin login endpoint
     """
-    if request.username == ADMIN_USERNAME and request.password == ADMIN_PASSWORD:
-        return {
-            "access_token": f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
-            "token_type": "bearer"
-        }
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    try:
+        # First try to authenticate against database
+        response = supabase_client.table("admin_users").select("*").eq("username", request.username).execute()
+        if response.data:
+            stored_user = response.data[0]
+            if verify_password(request.password, stored_user["password_hash"]):
+                # Generate JWT token
+                token = create_jwt_token(request.username)
+                return {
+                    "access_token": token,
+                    "token_type": "bearer"
+                }
+        
+        # Fall back to default credentials if database auth fails
+        if request.username == ADMIN_USERNAME and request.password == ADMIN_PASSWORD:
+            # Generate simple token for backward compatibility
+            return {
+                "access_token": f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
+                "token_type": "bearer"
+            }
+            
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication error",
+        )
 
 @app.get("/consultations", dependencies=[Depends(get_current_admin)])
 async def get_consultations():
@@ -337,6 +426,59 @@ async def update_consultation_status(booking_id: str, status: str):
     except Exception as e:
         print(f"Error updating consultation: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/admin/users", response_model=Dict[str, List[Dict[str, Any]]])
+async def get_admin_users(username: str = Depends(get_current_admin)):
+    """
+    Get all admin users (admin only)
+    """
+    try:
+        response = supabase_client.table("admin_users").select("id,username,role,created_at").execute()
+        return {"users": response.data}
+    except Exception as e:
+        print(f"Error retrieving admin users: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/admin/users", status_code=status.HTTP_201_CREATED)
+async def create_admin_user(user: AdminUserCreate, username: str = Depends(get_current_admin)):
+    """
+    Create a new admin user (admin only)
+    """
+    try:
+        # Check if user already exists
+        response = supabase_client.table("admin_users").select("*").eq("username", user.username).execute()
+        if response.data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists"
+            )
+        
+        # Hash password
+        hashed_password = hash_password(user.password)
+        
+        # Create user
+        supabase_client.table("admin_users").insert({
+            "username": user.username,
+            "password_hash": hashed_password,
+            "role": user.role,
+            "created_at": datetime.now().isoformat()
+        }).execute()
+        
+        return {"message": "User created successfully"}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error creating admin user: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize app on startup"""
+    try:
+        # Initialize default admin user
+        init_admin_user()
+    except Exception as e:
+        print(f"Startup error: {str(e)}")
 
 # Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
