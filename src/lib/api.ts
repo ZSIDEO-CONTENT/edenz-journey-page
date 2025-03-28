@@ -47,6 +47,22 @@ export interface Consultation {
   session_id?: string;
 }
 
+export interface ChatResponse {
+  response: string;
+  session_id: string;
+  success: boolean;
+  action?: string;
+  booking_data?: {
+    name: string;
+    email: string;
+    phone: string;
+    date: string;
+    time: string;
+    message?: string;
+    service?: string;
+  };
+}
+
 /**
  * Submits contact form data
  */
@@ -160,7 +176,7 @@ const getFallbackResponse = (message: string): string => {
 /**
  * Send a message to the chat API
  */
-export const sendChatMessage = async (message: string): Promise<string> => {
+export const sendChatMessage = async (message: string): Promise<ChatResponse> => {
   try {
     const sessionId = getChatSessionId();
     
@@ -193,12 +209,16 @@ export const sendChatMessage = async (message: string): Promise<string> => {
       localStorage.setItem(CHAT_SESSION_KEY, data.session_id);
     }
     
-    return data.response;
+    return data;
   } catch (error) {
     console.error('Error sending chat message:', error);
     
     // Return a fallback response when API is unavailable
-    return getFallbackResponse(message);
+    return {
+      response: getFallbackResponse(message),
+      session_id: getChatSessionId(),
+      success: false
+    };
   }
 };
 

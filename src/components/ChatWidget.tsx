@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,10 @@ import {
 } from '@/components/ui/sheet';
 import { sendChatMessage, ChatMessage, getChatHistory } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const ChatWidget = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -82,22 +85,44 @@ const ChatWidget = () => {
       
       // Add bot response
       const botMessage: ChatMessage = { 
-        content: response,
+        content: response.response,
         sender: 'bot'
       };
       setMessages(prev => [...prev, botMessage]);
       
-      // Check if conversation is about booking
-      const userMessages = [...messages, userMessage]
-        .filter(msg => msg.sender === 'user')
-        .map(msg => msg.content);
+      // Handle booking confirmation
+      if (response.action === "booking_confirmed" && response.booking_data) {
+        // Show a success toast
+        toast({
+          title: "Consultation Booked!",
+          description: "Your consultation has been scheduled. We'll be in touch soon!",
+        });
         
-      if (detectBookingIntent(userMessages) && !response.includes("booking has been confirmed")) {
-        // Optionally suggest a booking form for a smoother experience
-        if (Math.random() > 0.5 && !response.includes("booking")) {
+        // Optionally redirect to confirmation page or show more details
+        if (response.booking_data.date && response.booking_data.time) {
           setTimeout(() => {
             setMessages(prev => [...prev, {
-              content: "If you'd like to book a consultation, I can help you with that. Just let me know your name, email, phone number, and when you'd prefer to meet.",
+              content: `Your consultation is confirmed for ${response.booking_data.date} at ${response.booking_data.time}. You can manage your booking in your account or contact us for any changes.`,
+              sender: 'bot'
+            }]);
+          }, 1000);
+        }
+      }
+      // Handle partial booking data
+      else if (response.action === "booking_started") {
+        // The agent will handle asking for the needed details in its response
+      }
+      // Check if conversation is about booking
+      else {
+        const userMessages = [...messages, userMessage]
+          .filter(msg => msg.sender === 'user')
+          .map(msg => msg.content);
+          
+        if (detectBookingIntent(userMessages) && !response.response.includes("booking has been confirmed")) {
+          // Suggest booking form
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              content: "If you'd like to book a consultation right now, you can also use our booking form. Would you like me to take you there?",
               sender: 'bot'
             }]);
           }, 1000);
@@ -107,7 +132,7 @@ const ChatWidget = () => {
       console.error('Error in chat:', error);
       // Add error message
       const errorMessage: ChatMessage = { 
-        content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again later or contact us directly through the contact form.",
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.",
         sender: 'bot'
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -120,6 +145,35 @@ const ChatWidget = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBookingRedirect = () => {
+    navigate('/book-consultation');
+    setIsOpen(false);
+  };
+
+  // Function to process messages for booking intent
+  const processMessage = (content: string) => {
+    // Check if message suggests redirect to booking form
+    if (content.includes("booking form") && content.includes("take you there")) {
+      return (
+        <div>
+          {content}
+          <div className="mt-3">
+            <Button
+              onClick={handleBookingRedirect}
+              size="sm"
+              className="bg-primary text-white"
+            >
+              Go to Booking Form
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Regular message
+    return content;
   };
 
   return (
@@ -160,7 +214,7 @@ const ChatWidget = () => {
                         : 'bg-secondary text-foreground rounded-tl-none'
                     }`}
                   >
-                    {msg.content}
+                    {msg.sender === 'bot' ? processMessage(msg.content) : msg.content}
                   </div>
                 </div>
               ))}
