@@ -9,8 +9,13 @@ import uuid
 from datetime import datetime
 import supabase
 from crewai import Agent, Task, Crew, Process
-from langchain.llms import Together
-llm = Together(model="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free", together_api_key="tgp_v1_2OqWLQjUGqjzNIoBqr9XSk0mSvT8knu2TtbJM-aiL0Y")
+from langchain.chat_models import ChatOpenAI
+
+os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
+
+
+llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
@@ -54,10 +59,10 @@ class ChatResponse(BaseModel):
 edenz_agent = Agent(
     role="Study Abroad Education Consultant",
     goal="Help students find the best study abroad opportunities",
-    backstory="""You are an AI assistant for Edenz Consultants, a leading education consultancy 
+    backstory="""You are an AI assistant for Edenz Consultants, a leading Pakistani education consultancy 
     specializing in helping students pursue their dreams of studying abroad. You have extensive knowledge 
     about university programs, visa requirements, scholarship opportunities, and the application process 
-    for studying in countries like the UK, USA, Canada, Australia, and New Zealand.
+    for studying all around the world and dream destinations like UK, USA, Germany, Australia, France, Italy.
     You are friendly, knowledgeable, and always focused on providing accurate information to help 
     students make informed decisions about their education abroad.""",
     verbose=True,
