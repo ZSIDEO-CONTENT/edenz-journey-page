@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -10,11 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { useEffect } from "react";
 
 const formSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const AdminLogin = () => {
@@ -23,15 +22,19 @@ const AdminLogin = () => {
   
   useEffect(() => {
     // Check if already authenticated
-    if (isAuthenticated()) {
-      navigate("/admin/dashboard");
-    }
+    const checkAuth = async () => {
+      if (await isAuthenticated()) {
+        navigate("/admin/dashboard");
+      }
+    };
+    
+    checkAuth();
   }, [navigate]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -40,7 +43,7 @@ const AdminLogin = () => {
     setIsLoading(true);
     try {
       await adminLogin({
-        username: values.username,
+        email: values.email,
         password: values.password,
       });
       
@@ -54,7 +57,7 @@ const AdminLogin = () => {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Invalid username or password",
+        description: "Invalid email or password",
         variant: "destructive",
       });
     } finally {
@@ -75,12 +78,12 @@ const AdminLogin = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your username" {...field} />
+                    <Input placeholder="Enter your email" type="email" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -115,8 +118,8 @@ const AdminLogin = () => {
         </Form>
         
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Default credentials: admin / admin123</p>
-          <p className="mt-1">Configure your admin users in Supabase</p>
+          <p>To get started, create users through the Supabase Authentication dashboard</p>
+          <p className="mt-1">Or use the default admin: admin@edenz.com / password123</p>
         </div>
       </div>
     </div>

@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const isAuth = isAuthenticated();
+        const isAuth = await isAuthenticated();
         setAuth(isAuth);
         
         if (!isAuth) {

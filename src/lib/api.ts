@@ -2,6 +2,8 @@
  * API utility functions for form submissions and chat
  */
 
+import { createClient } from '@supabase/supabase-js';
+
 // Type definitions
 export interface ContactFormData {
   name: string;
@@ -28,13 +30,13 @@ export interface ChatMessage {
 }
 
 export interface AdminCredentials {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface AdminUser {
   id: string;
-  username: string;
+  email: string;
   role: string;
   created_at: string;
 }
@@ -68,6 +70,11 @@ export interface ChatResponse {
     service?: string;
   };
 }
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vxievjimtordkobtuink.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Submits contact form data
@@ -123,7 +130,6 @@ export const submitConsultationBooking = async (data: ConsultationBookingData): 
 
 // Store chat session ID in localStorage
 const CHAT_SESSION_KEY = 'edenz_chat_session_id';
-const AUTH_TOKEN_KEY = 'edenz_admin_token';
 
 /**
  * Get or create a chat session ID
@@ -259,26 +265,18 @@ export const getChatHistory = async (): Promise<ChatMessage[]> => {
 };
 
 /**
- * Admin login 
+ * Admin login using Supabase Auth
  */
-export const adminLogin = async (credentials: AdminCredentials): Promise<string> => {
+export const adminLogin = async (credentials: AdminCredentials): Promise<void> => {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
+    const { error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
     });
     
-    if (!response.ok) {
-      throw new Error('Invalid username or password');
+    if (error) {
+      throw error;
     }
-    
-    const data = await response.json();
-    localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
-    return data.access_token;
   } catch (error) {
     console.error('Error during login:', error);
     throw error;
@@ -288,15 +286,29 @@ export const adminLogin = async (credentials: AdminCredentials): Promise<string>
 /**
  * Check if user is logged in
  */
-export const isAuthenticated = (): boolean => {
-  return localStorage.getItem(AUTH_TOKEN_KEY) !== null;
+export const isAuthenticated = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch (error) {
+    console.error('Authentication check error:', error);
+    return false;
+  }
 };
 
 /**
  * Logout admin
  */
-export const logout = (): void => {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+export const logout = async (): Promise<void> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+    throw error;
+  }
 };
 
 /**
@@ -304,24 +316,16 @@ export const logout = (): void => {
  */
 export const getConsultations = async (): Promise<Consultation[]> => {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      throw new Error('Not authenticated');
+    const { data, error } = await supabase
+      .from('consultations')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
     }
     
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/consultations`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get consultations');
-    }
-    
-    const data = await response.json();
-    return data.consultations;
+    return data as Consultation[];
   } catch (error) {
     console.error('Error getting consultations:', error);
     throw error;
@@ -333,21 +337,13 @@ export const getConsultations = async (): Promise<Consultation[]> => {
  */
 export const updateConsultationStatus = async (consultationId: string, status: string): Promise<void> => {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-    
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/consultations/${consultationId}?status=${status}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to update consultation status');
+    const { error } = await supabase
+      .from('consultations')
+      .update({ status })
+      .eq('id', consultationId);
+      
+    if (error) {
+      throw error;
     }
   } catch (error) {
     console.error('Error updating consultation status:', error);
@@ -360,24 +356,18 @@ export const updateConsultationStatus = async (consultationId: string, status: s
  */
 export const getAdminUsers = async (): Promise<AdminUser[]> => {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      throw new Error('Not authenticated');
+    const { data, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) {
+      throw error;
     }
     
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/admin/users`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get admin users');
-    }
-    
-    const data = await response.json();
-    return data.users;
+    return data.users.map(user => ({
+      id: user.id,
+      email: user.email || '',
+      role: user.role || 'user',
+      created_at: user.created_at || new Date().toISOString()
+    }));
   } catch (error) {
     console.error('Error getting admin users:', error);
     throw error;
@@ -389,23 +379,14 @@ export const getAdminUsers = async (): Promise<AdminUser[]> => {
  */
 export const createAdminUser = async (credentials: AdminCredentials): Promise<void> => {
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-    
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/admin/users`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
+    const { error } = await supabase.auth.admin.createUser({
+      email: credentials.email,
+      password: credentials.password,
+      email_confirm: true
     });
     
-    if (!response.ok) {
-      throw new Error('Failed to create admin user');
+    if (error) {
+      throw error;
     }
   } catch (error) {
     console.error('Error creating admin user:', error);
