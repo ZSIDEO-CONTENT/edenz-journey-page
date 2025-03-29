@@ -18,27 +18,8 @@ os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
 
 # Configure security
 security = HTTPBearer()
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# Simple token verification for admin access - kept for backward compatibility
-def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        # We're now using Supabase Auth, but keeping this function for API compatibility
-        # For external API calls, we still check the simple token
-        if credentials.credentials != f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return ADMIN_USERNAME
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+
 
 llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
@@ -86,60 +67,6 @@ class ConsultationBooking(BaseModel):
     created_at: Optional[datetime] = None
     session_id: Optional[str] = None
 
-class AdminLoginRequest(BaseModel):
-    username: str
-    password: str
-
-class AdminLoginResponse(BaseModel):
-    access_token: str
-    token_type: str
-
-class AdminUserCreate(BaseModel):
-    username: str
-    password: str
-    role: str = "admin"
-
-class AdminUser(BaseModel):
-    id: str
-    username: str
-    role: str
-    created_at: datetime
-
-def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed.decode('utf-8')
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash"""
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-
-def create_jwt_token(username: str) -> str:
-    """Create a JWT token for user authentication"""
-    payload = {
-        "sub": username,
-        "exp": datetime.utcnow() + datetime.timedelta(minutes=JWT_EXPIRATION_MINUTES)
-    }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-def init_admin_user():
-    """Initialize default admin user if not exists"""
-    try:
-        # Check if admin user exists
-        response = supabase_client.table("admin_users").select("*").eq("username", ADMIN_USERNAME).execute()
-        if not response.data:
-            # Create default admin user
-            hashed_password = hash_password(ADMIN_PASSWORD)
-            supabase_client.table("admin_users").insert({
-                "username": ADMIN_USERNAME,
-                "password_hash": hashed_password,
-                "role": "admin",
-                "created_at": datetime.now().isoformat()
-            }).execute()
-            print(f"Created default admin user: {ADMIN_USERNAME}")
-    except Exception as e:
-        print(f"Error initializing admin user: {str(e)}")
 
 # Create the Edenz Consultant agent
 edenz_agent = Agent(
@@ -354,90 +281,6 @@ async def get_chat_session(session_id: str):
     history = get_chat_history(session_id)
     return {"session_id": session_id, "messages": history}
 
-@app.post("/login", response_model=AdminLoginResponse)
-async def admin_login(request: AdminLoginRequest):
-    """
-    Admin login endpoint (kept for backward compatibility)
-    """
-    try:
-        # Backward compatibility for the simple login
-        if request.username == ADMIN_USERNAME and request.password == ADMIN_PASSWORD:
-            # Return a simple token for backward compatibility
-            return {
-                "access_token": f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
-                "token_type": "bearer"
-            }
-            
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication error",
-        )
-
-@app.get("/consultations", dependencies=[Depends(get_current_admin)])
-async def get_consultations():
-    """
-    Get all consultation bookings (admin only)
-    """
-    try:
-        response = supabase_client.table("consultations").select("*").order("created_at", desc=True).execute()
-        return {"consultations": response.data}
-    except Exception as e:
-        print(f"Error retrieving consultations: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.patch("/consultations/{booking_id}", dependencies=[Depends(get_current_admin)])
-async def update_consultation_status(booking_id: str, status: str):
-    """
-    Update consultation status (admin only)
-    """
-    try:
-        response = supabase_client.table("consultations").update({"status": status}).eq("id", booking_id).execute()
-        return {"success": True, "updated": response.data}
-    except Exception as e:
-        print(f"Error updating consultation: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/admin/users", response_model=Dict[str, List[Dict[str, Any]]])
-async def get_admin_users(username: str = Depends(get_current_admin)):
-    """
-    Get all admin users (admin only) - Now using Supabase Auth
-    """
-    try:
-        # This would now fetch users from Supabase Auth
-        return {"users": []} # Simplified as we're using Supabase Auth UI
-    except Exception as e:
-        print(f"Error retrieving admin users: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/admin/users", status_code=status.HTTP_201_CREATED)
-async def create_admin_user(user: AdminUserCreate, username: str = Depends(get_current_admin)):
-    """
-    Create a new admin user (admin only) - Now redirects to Supabase Auth
-    """
-    try:
-        # This would now be managed through Supabase Auth UI
-        return {"message": "Please use Supabase Auth interface to manage users"}
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print(f"Error creating admin user: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize app on startup"""
-    try:
-        # No initialization needed as we're using Supabase Auth
-        pass
-    except Exception as e:
-        print(f"Startup error: {str(e)}")
 
 # Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
