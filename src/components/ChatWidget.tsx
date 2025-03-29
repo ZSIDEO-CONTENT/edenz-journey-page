@@ -96,13 +96,14 @@ const ChatWidget = () => {
         toast({
           title: "Consultation Booked!",
           description: "Your consultation has been scheduled. We'll be in touch soon!",
+          variant: "default"
         });
         
-        // Optionally redirect to confirmation page or show more details
+        // Display booking confirmation details
         if (response.booking_data.date && response.booking_data.time) {
           setTimeout(() => {
             setMessages(prev => [...prev, {
-              content: `Your consultation is confirmed for ${response.booking_data.date} at ${response.booking_data.time}. You can manage your booking in your account or contact us for any changes.`,
+              content: `Thank you, ${response.booking_data.name}! Your consultation is confirmed for ${response.booking_data.date} at ${response.booking_data.time}. We've sent a confirmation to ${response.booking_data.email}. You can manage your booking in your account or contact us for any changes.`,
               sender: 'bot'
             }]);
           }, 1000);
@@ -111,6 +112,7 @@ const ChatWidget = () => {
       // Handle partial booking data
       else if (response.action === "booking_started") {
         // The agent will handle asking for the needed details in its response
+        console.log("Booking process started, waiting for complete details");
       }
       // Check if conversation is about booking
       else {

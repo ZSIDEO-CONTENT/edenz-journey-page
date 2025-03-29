@@ -1,9 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, status
+
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-import json
 import os
 import uuid
 from datetime import datetime
@@ -16,16 +15,13 @@ from langchain.chat_models import ChatOpenAI
 os.environ["OPENAI_API_KEY"] = "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"
 os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
 
-# Configure security
-security = HTTPBearer()
-
-
-
-llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
 supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
 supabase_client = supabase.create_client(supabase_url, supabase_key)
+
+# Initialize LLM
+llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 
 app = FastAPI(title="Edenz AI Chat API")
 
