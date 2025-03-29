@@ -38,23 +38,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ChatMessage(BaseModel):
-    content: str
-    sender: str
-    timestamp: Optional[datetime] = None
-    session_id: Optional[str] = None
-
-class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = None
-
-class ChatResponse(BaseModel):
-    response: str
-    session_id: str
-    success: bool
-    action: Optional[str] = None
-    booking_data: Optional[Dict[str, Any]] = None
-
 class ConsultationBooking(BaseModel):
     name: str
     email: str
@@ -205,8 +188,8 @@ def fallback_response(message: str) -> str:
     else:
         return "Thank you for your question. Our education counselors can provide more detailed information. Would you like to book a consultation?"
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@app.post("/chat")
+async def chat(request):
     """
     Process a chat message and return a response
     """
@@ -258,13 +241,6 @@ async def health_check():
     """
     return {"status": "healthy", "service": "Edenz AI Chat API"}
 
-# Endpoint no longer needed, but keeping for API compatibility
-@app.get("/chat/history/{session_id}")
-async def get_chat_session(session_id: str):
-    """
-    Get chat history for a session - now returns empty list
-    """
-    return {"session_id": session_id, "messages": []}
 
 
 # Start the server with: uvicorn main:app --reload
