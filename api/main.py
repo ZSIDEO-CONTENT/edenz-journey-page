@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -20,8 +19,12 @@ supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.
 supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
 supabase_client = supabase.create_client(supabase_url, supabase_key)
 
-# Initialize LLM
-llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
+# Initialize LLM with explicit credentials
+llm = ChatOpenAI(
+    model_name="deepseek/deepseek-r1:free",
+    openai_api_key=os.environ["OPENAI_API_KEY"],
+    openai_api_base=os.environ["OPENAI_API_BASE"]
+)
 
 app = FastAPI(title="Edenz AI Chat API")
 
@@ -64,7 +67,7 @@ class ConsultationBooking(BaseModel):
     session_id: Optional[str] = None
 
 
-# Create the Edenz Consultant agent
+# Create the Edenz Consultant agent with explicit API key
 edenz_agent = Agent(
     role="Study Abroad Education Consultant",
     goal="Help students find the best study abroad opportunities and book consultations",
@@ -185,7 +188,12 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
         )
         
         # Get the result
-        result = crew.kickoff()
+        try:
+            result = crew.kickoff()
+            print(f"Agent response generated successfully: {result[:100]}...")  # Log first 100 chars of successful response
+        except Exception as e:
+            print(f"Detailed error in crew.kickoff(): {str(e)}")
+            return fallback_response(message), None, None
         
         # Check if we have complete booking data
         if booking_data and booking_data.get("date") and booking_data.get("time"):
@@ -233,9 +241,12 @@ async def chat(request: ChatRequest):
         # Get chat history if session_id exists
         history = get_chat_history(session_id) if request.session_id else []
         
+        print(f"Generating response for: '{request.message}'")
+        
         # Generate response
         try:
             response, action, booking_data = generate_agent_response(request.message, history)
+            print(f"Response generated. Action: {action}")
             
             # Save consultation booking if confirmed
             if action == "booking_confirmed" and booking_data:

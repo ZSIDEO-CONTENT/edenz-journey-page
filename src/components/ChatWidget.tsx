@@ -23,6 +23,7 @@ const ChatWidget = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of messages
@@ -83,6 +84,18 @@ const ChatWidget = () => {
       // Send message to API
       const response = await sendChatMessage(userInput);
       
+      if (response.success === false) {
+        // Reset error count on success
+        setErrorCount(0);
+        
+        // If using a fallback response, show a toast
+        toast({
+          title: "Using Offline Mode",
+          description: "We're having trouble connecting to our AI. Using simplified responses for now.",
+          variant: "default"
+        });
+      }
+      
       // Add bot response
       const botMessage: ChatMessage = { 
         content: response.response,
@@ -132,12 +145,29 @@ const ChatWidget = () => {
       }
     } catch (error) {
       console.error('Error in chat:', error);
+      setErrorCount(prev => prev + 1);
+      
       // Add error message
-      const errorMessage: ChatMessage = { 
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.",
+      let errorMessage = "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.";
+      
+      if (errorCount > 2) {
+        errorMessage = "Our AI assistant is currently unavailable. Please use our booking form or contact us directly for assistance.";
+      }
+      
+      setMessages(prev => [...prev, { 
+        content: errorMessage,
         sender: 'bot'
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
+      
+      if (errorCount > 3) {
+        // After multiple errors, suggest using the booking form directly
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            content: "Would you like to go to our booking form to schedule a consultation with a human expert?",
+            sender: 'bot'
+          }]);
+        }, 1000);
+      }
       
       toast({
         title: "Connection Error",
@@ -157,7 +187,7 @@ const ChatWidget = () => {
   // Function to process messages for booking intent
   const processMessage = (content: string) => {
     // Check if message suggests redirect to booking form
-    if (content.includes("booking form") && content.includes("take you there")) {
+    if (content.includes("booking form") && (content.includes("take you there") || content.includes("go to our booking form"))) {
       return (
         <div>
           {content}
