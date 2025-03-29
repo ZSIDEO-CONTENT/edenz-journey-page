@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -83,28 +84,10 @@ edenz_agent = Agent(
     llm=llm
 )
 
+# Note: This function is now a no-op since we're not storing chat messages
 def save_chat_to_db(session_id: str, message: str, response: str) -> None:
-    """Save chat messages to Supabase database"""
-    try:
-        # Save user message
-        supabase_client.table("chat_messages").insert({
-            "session_id": session_id,
-            "content": message,
-            "sender": "user",
-            "timestamp": datetime.now().isoformat()
-        }).execute()
-        
-        # Save bot response
-        supabase_client.table("chat_messages").insert({
-            "session_id": session_id,
-            "content": response,
-            "sender": "bot",
-            "timestamp": datetime.now().isoformat()
-        }).execute()
-    except Exception as e:
-        print(f"Error saving to database: {str(e)}")
-        # Continue execution even if database save fails
-        # This allows the chat to function without database access
+    """No longer saving chat messages to database"""
+    pass
 
 def save_consultation_to_db(booking_data: Dict[str, Any]) -> None:
     """Save consultation booking to Supabase database"""
@@ -119,14 +102,10 @@ def save_consultation_to_db(booking_data: Dict[str, Any]) -> None:
         print(f"Error saving consultation: {str(e)}")
         # Continue execution even if database save fails
 
+# Note: This function now returns an empty list since we're not storing chat messages
 def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
-    """Retrieve chat history from Supabase database"""
-    try:
-        response = supabase_client.table("chat_messages").select("*").eq("session_id", session_id).order("timestamp").execute()
-        return response.data
-    except Exception as e:
-        print(f"Error retrieving chat history: {str(e)}")
-        return []
+    """No longer retrieving chat history from database"""
+    return []
 
 def extract_booking_info(message: str, history: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
@@ -238,8 +217,8 @@ async def chat(request: ChatRequest):
         # Use provided session_id or generate a new one
         session_id = request.session_id or str(uuid.uuid4())
         
-        # Get chat history if session_id exists
-        history = get_chat_history(session_id) if request.session_id else []
+        # We're not getting history from the database anymore
+        history = []
         
         print(f"Generating response for: '{request.message}'")
         
@@ -259,11 +238,7 @@ async def chat(request: ChatRequest):
             print(f"Agent error: {str(e)}")
             response, action, booking_data = fallback_response(request.message), None, None
         
-        # Save to database (but don't stop execution if it fails)
-        try:
-            save_chat_to_db(session_id, request.message, response)
-        except Exception as e:
-            print(f"Database error: {str(e)}")
+        # We're no longer saving chat to database
         
         return {
             "response": response,
@@ -283,13 +258,13 @@ async def health_check():
     """
     return {"status": "healthy", "service": "Edenz AI Chat API"}
 
+# Endpoint no longer needed, but keeping for API compatibility
 @app.get("/chat/history/{session_id}")
 async def get_chat_session(session_id: str):
     """
-    Get chat history for a session
+    Get chat history for a session - now returns empty list
     """
-    history = get_chat_history(session_id)
-    return {"session_id": session_id, "messages": history}
+    return {"session_id": session_id, "messages": []}
 
 
 # Start the server with: uvicorn main:app --reload

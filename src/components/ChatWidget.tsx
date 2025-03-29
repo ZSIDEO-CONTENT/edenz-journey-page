@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import {
   SheetTitle, 
   SheetTrigger 
 } from '@/components/ui/sheet';
-import { sendChatMessage, ChatMessage, getChatHistory } from '@/lib/api';
+import { sendChatMessage, ChatMessage } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,7 +21,6 @@ const ChatWidget = () => {
     { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,31 +30,6 @@ const ChatWidget = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-
-  // Fetch chat history when widget opens
-  useEffect(() => {
-    if (isOpen && !isInitialized) {
-      loadChatHistory();
-    }
-  }, [isOpen, isInitialized]);
-
-  const loadChatHistory = async () => {
-    try {
-      setIsLoading(true);
-      const history = await getChatHistory();
-      
-      if (history && history.length > 0) {
-        setMessages(history);
-      }
-      
-      setIsInitialized(true);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
-      // Keep default welcome message
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Help functions to detect booking patterns in the conversation
   const detectBookingIntent = (userMessages: string[]): boolean => {

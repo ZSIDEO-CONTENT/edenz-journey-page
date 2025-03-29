@@ -235,33 +235,11 @@ export const sendChatMessage = async (message: string): Promise<ChatResponse> =>
 };
 
 /**
- * Get chat history for the current session
+ * Get chat history for the current session - now just returns an empty array
  */
 export const getChatHistory = async (): Promise<ChatMessage[]> => {
-  try {
-    const sessionId = getChatSessionId();
-    if (!sessionId) {
-      return [];
-    }
-    
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const response = await fetch(`${apiUrl}/chat/history/${sessionId}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to get chat history');
-    }
-    
-    const data = await response.json();
-    return data.messages.map((msg: any) => ({
-      content: msg.content,
-      sender: msg.sender,
-      timestamp: msg.timestamp
-    }));
-  } catch (error) {
-    console.error('Error getting chat history:', error);
-    // Return an empty array if history can't be fetched
-    return [];
-  }
+  // No longer fetching history from the database
+  return [];
 };
 
 /**
