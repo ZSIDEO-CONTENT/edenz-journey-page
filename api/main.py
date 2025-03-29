@@ -23,8 +23,8 @@ supabase_client = supabase.create_client(supabase_url, supabase_key)
 # Initialize LLM with explicit credentials
 llm = ChatOpenAI(
     model_name="deepseek/deepseek-r1:free",
-    openai_api_key=os.environ["OPENAI_API_KEY"],
-    openai_api_base=os.environ["OPENAI_API_BASE"]
+    openai_api_key="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",
+    openai_api_base="https://openrouter.ai/api/v1"
 )
 
 app = FastAPI(title="Edenz AI Chat API")
@@ -37,7 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+class ChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = None
 class ConsultationBooking(BaseModel):
     name: str
     email: str
@@ -128,16 +130,16 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
     """Generate response using Crew AI agent and check for consultation booking intent"""
     try:
         # Check if this is a booking request
-        booking_data = extract_booking_info(message, history or [])
+        # booking_data = extract_booking_info(message, history or [])
         
-        # Create a task for the agent
-        booking_prompt = ""
-        if booking_data and (not booking_data.get("date") or not booking_data.get("time")):
-            # If we detected booking intent but missing info
-            booking_prompt = ". The user wants to book a consultation but I need more information. Ask for missing details like name, email, phone, preferred date, and time."
+        # # Create a task for the agent
+        # booking_prompt = ""
+        # if booking_data and (not booking_data.get("date") or not booking_data.get("time")):
+        #     # If we detected booking intent but missing info
+        #     booking_prompt = ". The user wants to book a consultation but I need more information. Ask for missing details like name, email, phone, preferred date, and time."
         
         task = Task(
-            description=f"Respond to the user message: '{message}'{booking_prompt}. Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with an Edenz education expert.",
+            description=f"Respond to the user message: '{message}'. Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with an Edenz education expert. Ensure that the responce you provide is well structured and easy to read. Don't include any Markdown or HTML tags. Also add newline between each sentence.",
             agent=edenz_agent
         )
         
@@ -153,17 +155,21 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
         try:
             result = crew.kickoff()
             print(f"Agent response generated successfully: {result[:100]}...")  # Log first 100 chars of successful response
+
         except Exception as e:
             print(f"Detailed error in crew.kickoff(): {str(e)}")
             return fallback_response(message), None, None
         
+        
+                         
+        
         # Check if we have complete booking data
-        if booking_data and booking_data.get("date") and booking_data.get("time"):
-            # We have complete booking data
-            return result, "booking_confirmed", booking_data
-        elif booking_data:
-            # We have partial booking data
-            return result, "booking_started", None
+        # if booking_data and booking_data.get("date") and booking_data.get("time"):
+        #     # We have complete booking data
+        #     return result, "booking_confirmed", booking_data
+        # elif booking_data:
+        #     # We have partial booking data
+        #     return result, "booking_started", None
         
         return result, None, None
     except Exception as e:
@@ -189,26 +195,25 @@ def fallback_response(message: str) -> str:
         return "Thank you for your question. Our education counselors can provide more detailed information. Would you like to book a consultation?"
 
 @app.post("/chat")
-async def chat(request):
+async def chat(chat_request: ChatRequest):
     """
     Process a chat message and return a response
     """
     try:
-        if not request.message.strip():
+        if not chat_request.message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
         
         # Use provided session_id or generate a new one
-        session_id = request.session_id or str(uuid.uuid4())
+        session_id = chat_request.session_id or str(uuid.uuid4())
         
         # We're not getting history from the database anymore
         history = []
         
-        print(f"Generating response for: '{request.message}'")
+        print(f"Generating response for: '{chat_request.message}'")
         
         # Generate response
         try:
-            response, action, booking_data = generate_agent_response(request.message, history)
-            print(f"Response generated. Action: {action}")
+            response, action, booking_data = generate_agent_response(chat_request.message)
             
             # Save consultation booking if confirmed
             if action == "booking_confirmed" and booking_data:
@@ -219,9 +224,9 @@ async def chat(request):
                 response += "\n\nThank you! Your consultation has been booked. We'll confirm the details shortly."
         except Exception as e:
             print(f"Agent error: {str(e)}")
-            response, action, booking_data = fallback_response(request.message), None, None
-        
-        # We're no longer saving chat to database
+            response = fallback_response(chat_request.message)
+            action = None
+            booking_data = None
         
         return {
             "response": response,
