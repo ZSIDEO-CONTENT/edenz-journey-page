@@ -8,41 +8,24 @@ import os
 import uuid
 from datetime import datetime
 import supabase
-import bcrypt
-import jwt
+import re
 from crewai import Agent, Task, Crew, Process
 from langchain.chat_models import ChatOpenAI
-import re
 
 # Load environment variables
 os.environ["OPENAI_API_KEY"] = "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"
 os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
-
-# JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_MINUTES = 60 * 24  # 24 hours
 
 # Configure security
 security = HTTPBearer()
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# Simple token verification for admin access
+# Simple token verification for admin access - kept for backward compatibility
 def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        # First try JWT token
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        username = payload.get("sub")
-        if not username:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return username
-    except jwt.PyJWTError:
-        # Fall back to simple token if JWT fails
+        # We're now using Supabase Auth, but keeping this function for API compatibility
+        # For external API calls, we still check the simple token
         if credentials.credentials != f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,6 +33,12 @@ def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(securi
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return ADMIN_USERNAME
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 llm = ChatOpenAI(model_name="deepseek/deepseek-r1:free")
 # Initialize Supabase client
@@ -368,24 +357,12 @@ async def get_chat_session(session_id: str):
 @app.post("/login", response_model=AdminLoginResponse)
 async def admin_login(request: AdminLoginRequest):
     """
-    Admin login endpoint
+    Admin login endpoint (kept for backward compatibility)
     """
     try:
-        # First try to authenticate against database
-        response = supabase_client.table("admin_users").select("*").eq("username", request.username).execute()
-        if response.data:
-            stored_user = response.data[0]
-            if verify_password(request.password, stored_user["password_hash"]):
-                # Generate JWT token
-                token = create_jwt_token(request.username)
-                return {
-                    "access_token": token,
-                    "token_type": "bearer"
-                }
-        
-        # Fall back to default credentials if database auth fails
+        # Backward compatibility for the simple login
         if request.username == ADMIN_USERNAME and request.password == ADMIN_PASSWORD:
-            # Generate simple token for backward compatibility
+            # Return a simple token for backward compatibility
             return {
                 "access_token": f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}",
                 "token_type": "bearer"
@@ -430,11 +407,11 @@ async def update_consultation_status(booking_id: str, status: str):
 @app.get("/admin/users", response_model=Dict[str, List[Dict[str, Any]]])
 async def get_admin_users(username: str = Depends(get_current_admin)):
     """
-    Get all admin users (admin only)
+    Get all admin users (admin only) - Now using Supabase Auth
     """
     try:
-        response = supabase_client.table("admin_users").select("id,username,role,created_at").execute()
-        return {"users": response.data}
+        # This would now fetch users from Supabase Auth
+        return {"users": []} # Simplified as we're using Supabase Auth UI
     except Exception as e:
         print(f"Error retrieving admin users: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -442,29 +419,11 @@ async def get_admin_users(username: str = Depends(get_current_admin)):
 @app.post("/admin/users", status_code=status.HTTP_201_CREATED)
 async def create_admin_user(user: AdminUserCreate, username: str = Depends(get_current_admin)):
     """
-    Create a new admin user (admin only)
+    Create a new admin user (admin only) - Now redirects to Supabase Auth
     """
     try:
-        # Check if user already exists
-        response = supabase_client.table("admin_users").select("*").eq("username", user.username).execute()
-        if response.data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already exists"
-            )
-        
-        # Hash password
-        hashed_password = hash_password(user.password)
-        
-        # Create user
-        supabase_client.table("admin_users").insert({
-            "username": user.username,
-            "password_hash": hashed_password,
-            "role": user.role,
-            "created_at": datetime.now().isoformat()
-        }).execute()
-        
-        return {"message": "User created successfully"}
+        # This would now be managed through Supabase Auth UI
+        return {"message": "Please use Supabase Auth interface to manage users"}
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -475,8 +434,8 @@ async def create_admin_user(user: AdminUserCreate, username: str = Depends(get_c
 async def startup_event():
     """Initialize app on startup"""
     try:
-        # Initialize default admin user
-        init_admin_user()
+        # No initialization needed as we're using Supabase Auth
+        pass
     except Exception as e:
         print(f"Startup error: {str(e)}")
 
