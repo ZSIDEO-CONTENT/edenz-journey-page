@@ -100,6 +100,8 @@ def save_chat_to_db(session_id: str, message: str, response: str) -> None:
         }).execute()
     except Exception as e:
         print(f"Error saving to database: {str(e)}")
+        # Continue execution even if database save fails
+        # This allows the chat to function without database access
 
 def save_consultation_to_db(booking_data: Dict[str, Any]) -> None:
     """Save consultation booking to Supabase database"""
@@ -112,6 +114,7 @@ def save_consultation_to_db(booking_data: Dict[str, Any]) -> None:
         print(f"Consultation saved: {booking_data}")
     except Exception as e:
         print(f"Error saving consultation: {str(e)}")
+        # Continue execution even if database save fails
 
 def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
     """Retrieve chat history from Supabase database"""
@@ -245,7 +248,7 @@ async def chat(request: ChatRequest):
             print(f"Agent error: {str(e)}")
             response, action, booking_data = fallback_response(request.message), None, None
         
-        # Save to database
+        # Save to database (but don't stop execution if it fails)
         try:
             save_chat_to_db(session_id, request.message, response)
         except Exception as e:
