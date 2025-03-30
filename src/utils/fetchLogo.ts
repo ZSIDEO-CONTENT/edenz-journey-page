@@ -25,9 +25,10 @@ async function fetchAndSaveLogo() {
       throw new Error(`Failed to fetch logo: ${response.status} ${response.statusText}`);
     }
     
-    const buffer = await response.buffer();
+    const buffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(buffer);
     
-    fs.writeFileSync(LOGO_PATH, buffer);
+    fs.writeFileSync(LOGO_PATH, uint8Array);
     
     console.log('Logo saved successfully to:', LOGO_PATH);
   } catch (error) {
