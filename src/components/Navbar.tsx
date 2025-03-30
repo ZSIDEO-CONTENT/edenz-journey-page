@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,8 +35,15 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-primary font-bold mr-1">Edenz</span>
-              <span className="text-foreground font-bold">Consultant</span>
+              <img 
+                src="/edenz-logo.webp" 
+                alt="Edenz Consultants Logo" 
+                className="h-10 w-auto mr-2"
+              />
+              <div>
+                <span className="text-primary font-bold mr-1">Edenz</span>
+                <span className="text-foreground font-bold">Consultant</span>
+              </div>
             </Link>
           </div>
 
