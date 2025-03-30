@@ -36,7 +36,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <img 
-                src="/edenz-logo.webp" 
+                src="https://edenzconsultant.org/static/frontend/img/logo.webp" 
                 alt="Edenz Consultants Logo" 
                 className="h-10 w-auto mr-2"
               />
