@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,6 @@ const ChatWidget = () => {
     { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorCount, setErrorCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of messages
@@ -31,12 +31,10 @@ const ChatWidget = () => {
     }
   }, [messages]);
 
-  // Help functions to detect booking patterns in the conversation
-  const detectBookingIntent = (userMessages: string[]): boolean => {
-    const bookingKeywords = ['book', 'consult', 'appointment', 'schedule', 'meet', 'talk'];
-    const lastFewMessages = userMessages.slice(-3).join(' ').toLowerCase();
-    
-    return bookingKeywords.some(keyword => lastFewMessages.includes(keyword));
+  // Detect booking intent in conversation
+  const detectBookingIntent = (userMessage: string): boolean => {
+    const bookingKeywords = ['book', 'consult', 'appointment', 'schedule', 'meet', 'talk', 'with doctor', 'with dr'];
+    return bookingKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -54,100 +52,42 @@ const ChatWidget = () => {
     setIsLoading(true);
     
     try {
-      // Send message to API
-      const response = await sendChatMessage(userInput);
-      
-      if (response.success === false) {
-        // Reset error count on success
-        setErrorCount(0);
+      // Check if message contains booking intent
+      if (detectBookingIntent(userInput)) {
+        // Add bot response suggesting booking
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            content: "I'd be happy to help you book a consultation with Dr. Taimoor Ali Ahmad. Would you like to go to our booking page now?",
+            sender: 'bot'
+          }]);
+          setIsLoading(false);
+        }, 1000);
+      } else {
+        // Send message to API for regular queries
+        const response = await sendChatMessage(userInput);
         
-        // If using a fallback response, show a toast
-        toast({
-          title: "Using Offline Mode",
-          description: "We're having trouble connecting to our AI. Using simplified responses for now.",
-          variant: "default"
-        });
-      }
-      
-      // Add bot response
-      const botMessage: ChatMessage = { 
-        content: response.response,
-        sender: 'bot'
-      };
-      setMessages(prev => [...prev, botMessage]);
-      
-      // Handle booking confirmation
-      if (response.action === "booking_confirmed" && response.booking_data) {
-        // Show a success toast
-        toast({
-          title: "Consultation Booked!",
-          description: "Your consultation has been scheduled. We'll be in touch soon!",
-          variant: "default"
-        });
-        
-        // Display booking confirmation details
-        if (response.booking_data.date && response.booking_data.time) {
-          setTimeout(() => {
-            setMessages(prev => [...prev, {
-              content: `Thank you, ${response.booking_data.name}! Your consultation is confirmed for ${response.booking_data.date} at ${response.booking_data.time}. We've sent a confirmation to ${response.booking_data.email}. You can manage your booking in your account or contact us for any changes.`,
-              sender: 'bot'
-            }]);
-          }, 1000);
-        }
-      }
-      // Handle partial booking data
-      else if (response.action === "booking_started") {
-        // The agent will handle asking for the needed details in its response
-        console.log("Booking process started, waiting for complete details");
-      }
-      // Check if conversation is about booking
-      else {
-        const userMessages = [...messages, userMessage]
-          .filter(msg => msg.sender === 'user')
-          .map(msg => msg.content);
-          
-        if (detectBookingIntent(userMessages) && !response.response.includes("booking has been confirmed")) {
-          // Suggest booking form
-          setTimeout(() => {
-            setMessages(prev => [...prev, {
-              content: "If you'd like to book a consultation right now, you can also use our booking form. Would you like me to take you there?",
-              sender: 'bot'
-            }]);
-          }, 1000);
-        }
+        // Add bot response
+        setMessages(prev => [...prev, { 
+          content: response.response,
+          sender: 'bot'
+        }]);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error in chat:', error);
-      setErrorCount(prev => prev + 1);
       
       // Add error message
-      let errorMessage = "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.";
-      
-      if (errorCount > 2) {
-        errorMessage = "Our AI assistant is currently unavailable. Please use our booking form or contact us directly for assistance.";
-      }
-      
       setMessages(prev => [...prev, { 
-        content: errorMessage,
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.",
         sender: 'bot'
       }]);
-      
-      if (errorCount > 3) {
-        // After multiple errors, suggest using the booking form directly
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            content: "Would you like to go to our booking form to schedule a consultation with a human expert?",
-            sender: 'bot'
-          }]);
-        }, 1000);
-      }
       
       toast({
         title: "Connection Error",
         description: "Couldn't connect to the chat server. Please try again later.",
         variant: "destructive"
       });
-    } finally {
+      
       setIsLoading(false);
     }
   };
@@ -157,10 +97,11 @@ const ChatWidget = () => {
     setIsOpen(false);
   };
 
-  // Function to process messages for booking intent
+  // Process messages to add booking button when appropriate
   const processMessage = (content: string) => {
-    // Check if message suggests redirect to booking form
-    if (content.includes("booking form") && (content.includes("take you there") || content.includes("go to our booking form"))) {
+    // If message suggests booking, add a button
+    if (content.includes("booking page") || 
+        (content.includes("consultation") && content.includes("Dr. Taimoor"))) {
       return (
         <div>
           {content}
@@ -170,7 +111,7 @@ const ChatWidget = () => {
               size="sm"
               className="bg-primary text-white"
             >
-              Go to Booking Form
+              Go to Booking Page
             </Button>
           </div>
         </div>
