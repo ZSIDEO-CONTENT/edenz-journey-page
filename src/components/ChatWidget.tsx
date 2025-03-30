@@ -31,12 +31,6 @@ const ChatWidget = () => {
     }
   }, [messages]);
 
-  // Detect booking intent in conversation
-  const detectBookingIntent = (userMessage: string): boolean => {
-    const bookingKeywords = ['book', 'consult', 'appointment', 'schedule', 'meet', 'talk', 'with doctor', 'with dr'];
-    return bookingKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-  };
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -47,32 +41,20 @@ const ChatWidget = () => {
     setMessages(prev => [...prev, userMessage]);
     
     // Clear input and set loading
-    const userInput = message;
     setMessage('');
     setIsLoading(true);
     
     try {
-      // Check if message contains booking intent
-      if (detectBookingIntent(userInput)) {
-        // Add bot response suggesting booking
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            content: "I'd be happy to help you book a consultation with Dr. Taimoor Ali Ahmad. Would you like to go to our booking page now?",
-            sender: 'bot'
-          }]);
-          setIsLoading(false);
-        }, 1000);
-      } else {
-        // Send message to API for regular queries
-        const response = await sendChatMessage(userInput);
-        
-        // Add bot response
-        setMessages(prev => [...prev, { 
-          content: response.response,
-          sender: 'bot'
-        }]);
-        setIsLoading(false);
-      }
+      // Send message to API
+      const response = await sendChatMessage(message);
+      
+      // Add bot response
+      setMessages(prev => [...prev, { 
+        content: response.response,
+        sender: 'bot'
+      }]);
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Error in chat:', error);
       
@@ -99,9 +81,13 @@ const ChatWidget = () => {
 
   // Process messages to add booking button when appropriate
   const processMessage = (content: string) => {
-    // If message suggests booking, add a button
-    if (content.includes("booking page") || 
-        (content.includes("consultation") && content.includes("Dr. Taimoor"))) {
+    // If message contains booking suggestions, add a booking button
+    if ((content.includes("booking page") || 
+         content.includes("schedule a") ||
+         content.includes("book a consultation") ||
+         content.includes("consultation with Dr") ||
+         content.includes("direct you to our booking")) && 
+        content.includes("Taimoor")) {
       return (
         <div>
           {content}

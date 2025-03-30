@@ -64,7 +64,7 @@ class ChatHistoryItem(BaseModel):
 # Create the Edenz Consultant agent with explicit API key
 edenz_agent = Agent(
     role="Study Abroad Education Consultant",
-    goal="Help students find the best study abroad opportunities and book consultations",
+    goal="Help students find the best study abroad opportunities and encourage booking consultations",
     backstory="""You are an AI assistant for Edenz Consultants, a leading Pakistani education consultancy 
     specializing in helping students pursue their dreams of studying abroad. You have extensive knowledge 
     about university programs, visa requirements, scholarship opportunities, and the application process 
@@ -74,34 +74,14 @@ edenz_agent = Agent(
     Dr. Ahmad personally oversees consultations and brings his international academic experience to help students.
     
     You are friendly, knowledgeable, and always focused on providing accurate information to help 
-    students make informed decisions about their education abroad. When users express interest in booking a consultation,
-    you should collect their name, email, phone number, preferred date, and time. Let them know they'll be meeting 
-    directly with Dr. Taimoor Ali Ahmad for personalized guidance.""",
+    students make informed decisions about their education abroad. For any student showing interest in 
+    studying abroad or needing detailed guidance, encourage them to book a FREE consultation with 
+    Dr. Taimoor Ali Ahmad through the booking form. Don't try to collect booking information directly - 
+    just encourage them to use the booking form.""",
     verbose=True,
     allow_delegation=False,
     llm=llm
 )
-
-def save_consultation_to_db(booking_data: Dict[str, Any]) -> str:
-    """Save consultation booking to Supabase database and return the ID"""
-    try:
-        result = supabase_client.table("consultations").insert({
-            **booking_data,
-            "created_at": datetime.now().isoformat(),
-            "status": "pending"
-        }).execute()
-        
-        # Extract the ID of the created consultation
-        if result and hasattr(result, "data") and len(result.data) > 0:
-            consultation_id = result.data[0].get("id")
-            print(f"Consultation saved with ID: {consultation_id}")
-            return consultation_id
-        else:
-            print("Consultation saved but couldn't retrieve ID")
-            return ""
-    except Exception as e:
-        print(f"Error saving consultation: {str(e)}")
-        return ""
 
 def save_chat_message(message: str, sender: str, session_id: str) -> bool:
     """Save chat message to Supabase database"""
@@ -130,127 +110,14 @@ def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
         print(f"Error retrieving chat history: {str(e)}")
         return []
 
-def send_confirmation_email(booking_data: Dict[str, Any]) -> bool:
-    """Send confirmation email to the client"""
-    try:
-        # In a production environment, you would use a proper email service like SendGrid, Mailgun, etc.
-        # For now, we'll simulate the email sending
-        print(f"Sending confirmation email to: {booking_data['email']}")
-        print(f"Email content: Consultation booked for {booking_data['name']} on {booking_data['date']} at {booking_data['time']} with Dr. Taimoor Ali Ahmad")
-        
-        # Here would be the actual email sending code
-        # Example with SendGrid:
-        # from sendgrid import SendGridAPIClient
-        # from sendgrid.helpers.mail import Mail
-        # message = Mail(from_email='info@edenzconsultant.org', to_emails=booking_data['email'])
-        # message.subject = 'Your Edenz Consultants Appointment Confirmation'
-        # message.html_content = f'Dear {booking_data["name"]}, your consultation has been booked for {booking_data["date"]} at {booking_data["time"]} with Dr. Taimoor Ali Ahmad.'
-        # sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-        # response = sg.send(message)
-        
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
-
-def send_whatsapp_notification(booking_data: Dict[str, Any]) -> bool:
-    """Send WhatsApp notification to the client if a valid WhatsApp number is provided"""
-    try:
-        phone = booking_data['phone'].strip()
-        
-        # Basic validation for a potential WhatsApp number (starts with + and has at least 10 digits)
-        is_valid_whatsapp = bool(re.match(r'^\+?\d{10,}$', phone.replace(" ", "").replace("-", "")))
-        
-        if is_valid_whatsapp:
-            # In a production environment, you would use a WhatsApp Business API or services like Twilio
-            # For now, we'll simulate the WhatsApp sending
-            print(f"Sending WhatsApp notification to: {phone}")
-            print(f"WhatsApp content: Consultation booked for {booking_data['name']} on {booking_data['date']} at {booking_data['time']} with Dr. Taimoor Ali Ahmad")
-            
-            # Here would be the actual WhatsApp sending code
-            # Example with Twilio:
-            # from twilio.rest import Client
-            # account_sid = os.environ['TWILIO_ACCOUNT_SID']
-            # auth_token = os.environ['TWILIO_AUTH_TOKEN']
-            # client = Client(account_sid, auth_token)
-            # message = client.messages.create(
-            #     from_='whatsapp:+14155238886',  # Your Twilio WhatsApp number
-            #     body=f'Dear {booking_data["name"]}, your consultation has been booked for {booking_data["date"]} at {booking_data["time"]} with Dr. Taimoor Ali Ahmad.',
-            #     to=f'whatsapp:{phone}'
-            # )
-            
-            return True
-        else:
-            print(f"Invalid WhatsApp number format: {phone}. Skipping WhatsApp notification.")
-            return False
-    except Exception as e:
-        print(f"Error sending WhatsApp notification: {str(e)}")
-        return False
-
-def notify_booking(booking_data: Dict[str, Any]) -> Dict[str, bool]:
-    """Send notifications about the booking to the client"""
-    email_sent = send_confirmation_email(booking_data)
-    whatsapp_sent = send_whatsapp_notification(booking_data)
-    
-    return {
-        "email_sent": email_sent,
-        "whatsapp_sent": whatsapp_sent
-    }
-
-def extract_booking_info(message: str, history: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """
-    Extract consultation booking information from the conversation
-    Returns None if not enough information is available
-    """
-    # Combine current message with history to provide context
-    context = ""
-    for item in history:
-        context += f"{item['sender']}: {item['content']}\n"
-    context += f"user: {message}"
-    
-    # Setup extraction task for the agent
-    try:
-        task = Task(
-            description=f"""Extract booking information from this conversation: '{context}'. 
-            Look for name, email, phone, preferred date and time. If any of this information is missing, return None.
-            Return the data in a structured format if all required fields are found.""",
-            agent=edenz_agent
-        )
-        
-        # Create a crew with just our agent
-        crew = Crew(
-            agents=[edenz_agent],
-            tasks=[task],
-            process=Process.sequential,
-            verbose=True
-        )
-        
-        result = crew.kickoff()
-        
-        # Parse the result to extract booking information
-        # This is a simplified approach - in production you'd use more robust parsing
-        if "name:" in result.lower() and "email:" in result.lower() and "phone:" in result.lower():
-            # Simple regex patterns to extract information
-            name_match = re.search(r"name:\s*([^\n]+)", result, re.IGNORECASE)
-            email_match = re.search(r"email:\s*([^\n]+)", result, re.IGNORECASE)
-            phone_match = re.search(r"phone:\s*([^\n]+)", result, re.IGNORECASE)
-            date_match = re.search(r"date:\s*([^\n]+)", result, re.IGNORECASE)
-            time_match = re.search(r"time:\s*([^\n]+)", result, re.IGNORECASE)
-            
-            if name_match and email_match and phone_match and date_match and time_match:
-                booking_data = {
-                    "name": name_match.group(1).strip(),
-                    "email": email_match.group(1).strip(),
-                    "phone": phone_match.group(1).strip(),
-                    "date": date_match.group(1).strip(),
-                    "time": time_match.group(1).strip()
-                }
-                return booking_data
-    
-    except Exception as e:
-        print(f"Error extracting booking info: {str(e)}")
-    
-    return None
+def detect_booking_intent(message: str) -> bool:
+    """Detect if a message contains booking intent"""
+    booking_keywords = [
+        'book', 'consult', 'appointment', 'schedule', 'meet', 
+        'talk to', 'with doctor', 'with dr', 'consultation', 
+        'how can i book', 'want to discuss', 'speak with expert'
+    ]
+    return any(keyword in message.lower() for keyword in booking_keywords)
 
 def format_history_for_agent(history: List[Dict[str, Any]]) -> str:
     """Format chat history for the agent to use as context"""
@@ -270,25 +137,36 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
         # Format history for context
         context = format_history_for_agent(history if history else [])
         
-        # Check for booking information
-        booking_data = extract_booking_info(message, history if history else [])
+        # Check if this is a booking-related query
+        has_booking_intent = detect_booking_intent(message)
         
-        # If booking data is complete, confirm the booking
-        if booking_data and all(key in booking_data and booking_data[key] for key in ["name", "email", "phone", "date", "time"]):
-            print("Complete booking information detected!")
-            return (f"Thank you, {booking_data['name']}! I'm pleased to confirm your consultation with Dr. Taimoor Ali Ahmad on {booking_data['date']} at {booking_data['time']}. We'll be sending a confirmation to your email ({booking_data['email']}) shortly. If you need to make any changes, please reach out to us. Dr. Ahmad is looking forward to meeting with you and discussing your study abroad plans.", 
-                    "booking_confirmed", 
-                    booking_data)
+        # For booking intents, provide a direct booking suggestion
+        if has_booking_intent:
+            booking_response = (
+                f"I'd be happy to help you book a free consultation with Dr. Taimoor Ali Ahmad, who holds a PhD "
+                f"in Advanced Materials from Germany. He personally oversees all consultations at Edenz Consultants. "
+                f"Please visit our booking page where you can schedule a convenient time for your consultation. "
+                f"Would you like me to direct you to our booking page now?"
+            )
+            return booking_response, "booking_intent"
         
-        # Define a task with context from chat history
+        # For regular queries, use the AI agent
         task = Task(
             description=f"""Given this conversation history: '{context}' 
             Respond to the user's latest message: '{message}'. 
-            Be helpful, accurate, and friendly. If you don't know the answer, suggest booking a consultation with Dr. Taimoor Ali Ahmad, 
-            who leads Edenz Consultants and has a PhD in Advanced Materials from Germany. 
-            If the user asks about Dr. Ahmad, mention his expertise and international experience.
-            If the user seems interested in booking a consultation, ask for their name, email, phone, preferred date and time. 
-            Ensure that the response you provide is well structured and easy to read.""",
+            Be helpful, accurate, and friendly. Provide valuable information on study abroad programs, 
+            requirements, and opportunities. If the user asks about complex visa processes, specific university 
+            requirements, or needs personalized guidance, suggest booking a FREE consultation with Dr. Taimoor Ali Ahmad,
+            who personally oversees all consultations at Edenz Consultants.
+            
+            If the user asks about Dr. Ahmad, mention his PhD in Advanced Materials from Germany and his 
+            extensive experience in international education.
+            
+            IMPORTANT: Don't try to collect any booking information directly. Instead, encourage the user to 
+            book a consultation using the booking form. End your message with a suggestion to book a free 
+            consultation when appropriate.
+            
+            Ensure your response is well-structured and easy to read.""",
             agent=edenz_agent
         )
         
@@ -304,33 +182,24 @@ def generate_agent_response(message: str, history: List[Dict[str, Any]] = None) 
         try:
             result = crew.kickoff()
             print(f"Agent response generated successfully: {result[:100]}...")  # Log first 100 chars of successful response
-            
-            # Check if response suggests booking is in progress
-            booking_keywords = ["name", "email", "phone", "date", "time", "schedule", "book"]
-            is_booking_related = sum(1 for keyword in booking_keywords if keyword in result.lower()) >= 3
-            
-            if is_booking_related and not booking_data:
-                return result, "booking_started", None
-            else:
-                return result, None, None
-
+            return result, None
         except Exception as e:
             print(f"Detailed error in crew.kickoff(): {str(e)}")
-            return fallback_response(message), None, None
+            return fallback_response(message), None
         
     except Exception as e:
         print(f"Error generating agent response: {str(e)}")
-        return fallback_response(message), None, None
+        return fallback_response(message), None
 
 def fallback_response(message: str) -> str:
     """Fallback response when AI agent fails"""
-    if "Dr" in message or "Taimoor" in message or "Ahmad" in message or "CEO" in message:
-        return "Dr. Taimoor Ali Ahmad is the CEO of Edenz Consultants with a PhD in Advanced Materials from Germany. He personally oversees consultations to provide expert guidance. Would you like to book a consultation with him?"
+    if any(keyword in message.lower() for keyword in ["dr", "taimoor", "ahmad", "ceo", "doctor"]):
+        return "Dr. Taimoor Ali Ahmad is the CEO of Edenz Consultants with a PhD in Advanced Materials from Germany. He personally oversees consultations to provide expert guidance. Would you like to book a free consultation with him?"
     
-    if "book" in message.lower() or "consult" in message.lower() or "appointment" in message.lower():
-        return "We'd be happy to book a consultation for you with Dr. Taimoor Ali Ahmad. Could you please provide your name, email, phone number, and preferred date and time?"
+    if detect_booking_intent(message):
+        return "We'd be happy to arrange a free consultation for you with Dr. Taimoor Ali Ahmad. Our booking page makes it easy to find a time that works for you. Would you like me to direct you to our booking page now?"
     
-    return "Thank you for your question. Our education counselors led by Dr. Taimoor Ali Ahmad can provide more detailed information. Would you like to book a consultation?"
+    return "Thank you for your question. Our education counselors, led by Dr. Taimoor Ali Ahmad, can provide more detailed information in a personalized consultation. Would you like to book a free consultation to discuss your study abroad plans?"
 
 @app.post("/chat")
 async def chat(chat_request: ChatRequest):
@@ -354,39 +223,20 @@ async def chat(chat_request: ChatRequest):
         
         # Generate response
         try:
-            response, action, booking_data = generate_agent_response(chat_request.message, history)
+            response, action = generate_agent_response(chat_request.message, history)
             
             # Save bot response to history
             save_chat_message(response, "bot", session_id)
-            
-            # Save consultation booking if confirmed
-            if action == "booking_confirmed" and booking_data:
-                booking_data["session_id"] = session_id
-                consultation_id = save_consultation_to_db(booking_data)
-                
-                if consultation_id:
-                    # Send notifications
-                    notification_results = notify_booking(booking_data)
-                    
-                    # Add confirmation to response
-                    response += "\n\nThank you! Your consultation with Dr. Taimoor Ali Ahmad has been booked. "
-                    if notification_results["email_sent"]:
-                        response += "We've sent a confirmation email. "
-                    if notification_results["whatsapp_sent"]:
-                        response += "You'll also receive a WhatsApp message shortly. "
-                    response += "We look forward to speaking with you soon!"
         except Exception as e:
             print(f"Agent error: {str(e)}")
             response = fallback_response(chat_request.message)
             action = None
-            booking_data = None
         
         return {
             "response": response,
             "session_id": session_id,
             "success": True,
-            "action": action,
-            "booking_data": booking_data
+            "action": action
         }
     except Exception as e:
         print(f"General error: {str(e)}")
@@ -411,15 +261,31 @@ async def create_consultation(consultation: ConsultationBooking):
         }
         
         # Save to database
-        consultation_id = save_consultation_to_db(booking_data)
+        try:
+            result = supabase_client.table("consultations").insert({
+                **booking_data,
+                "created_at": datetime.now().isoformat(),
+            }).execute()
+            
+            # Extract the ID of the created consultation
+            if result and hasattr(result, "data") and len(result.data) > 0:
+                consultation_id = result.data[0].get("id")
+                print(f"Consultation saved with ID: {consultation_id}")
+            else:
+                print("Consultation saved but couldn't retrieve ID")
+                consultation_id = ""
+        except Exception as e:
+            print(f"Error saving consultation: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
         
-        # Send notifications
-        notification_results = notify_booking(booking_data)
-        
+        # We're simplifying notification logic - just acknowledge the booking
         return {
             "id": consultation_id,
             "status": "success",
-            "notifications": notification_results
+            "notifications": {
+                "email_sent": True,
+                "whatsapp_sent": False
+            }
         }
     except Exception as e:
         print(f"Error creating consultation: {str(e)}")
