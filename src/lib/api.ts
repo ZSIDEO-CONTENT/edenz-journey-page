@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { format } from 'date-fns';
 
 // Type definitions
 export interface ContactFormData {
@@ -106,26 +107,38 @@ export const submitContactForm = async (data: ContactFormData): Promise<void> =>
  * Submits consultation booking data
  */
 export const submitConsultationBooking = async (data: ConsultationBookingData): Promise<void> => {
-  // Log the booking data
-  console.log('Consultation booking:', data);
-  
-  // In a real application, this would be an API call to your backend
-  return new Promise((resolve, reject) => {
-    // Simulate API request delay
-    setTimeout(() => {
-      try {
-        // Simulate server response
-        // For production, replace with actual API call
-        if (Math.random() > 0.1) { // 90% success rate
-          resolve();
-        } else {
-          reject(new Error('Failed to book consultation'));
-        }
-      } catch (error) {
-        reject(error);
-      }
-    }, 1500);
-  });
+  try {
+    // Format date for database storage
+    const formattedDate = data.preferredDate ? format(data.preferredDate, 'yyyy-MM-dd') : '';
+    
+    // Prepare data for submission
+    const consultationData = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      date: formattedDate,
+      time: data.preferredTime,
+      service: data.service,
+      message: data.message || '',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    };
+    
+    // Insert into Supabase database
+    const { error } = await supabase
+      .from('consultations')
+      .insert([consultationData]);
+      
+    if (error) {
+      console.error('Error saving consultation to database:', error);
+      throw new Error('Failed to save consultation');
+    }
+    
+    console.log('Consultation booked successfully');
+  } catch (error) {
+    console.error('Error booking consultation:', error);
+    throw error;
+  }
 };
 
 // Store chat session ID in localStorage
