@@ -1,3 +1,4 @@
+
 /**
  * API utility functions for form submissions and chat
  */
@@ -72,10 +73,24 @@ export interface ChatResponse {
   };
 }
 
+export interface NotificationResult {
+  email_sent: boolean;
+  whatsapp_sent: boolean;
+}
+
+export interface ConsultationResponse {
+  id: string;
+  status: string;
+  notifications: NotificationResult;
+}
+
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vxievjimtordkobtuink.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// API base URL
+const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Submits contact form data
@@ -104,37 +119,76 @@ export const submitContactForm = async (data: ContactFormData): Promise<void> =>
 };
 
 /**
- * Submits consultation booking data
+ * Submits consultation booking data and sends confirmation notifications
  */
-export const submitConsultationBooking = async (data: ConsultationBookingData): Promise<void> => {
+export const submitConsultationBooking = async (data: ConsultationBookingData): Promise<NotificationResult> => {
   try {
     // Format date for database storage
     const formattedDate = data.preferredDate ? format(data.preferredDate, 'yyyy-MM-dd') : '';
     
-    // Prepare data for submission
-    const consultationData = {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      date: formattedDate,
-      time: data.preferredTime,
-      service: data.service,
-      message: data.message || '',
-      status: 'pending',
-      created_at: new Date().toISOString(),
-    };
+    // Use the API endpoint if available, otherwise fallback to direct Supabase
+    const apiUrl = getApiUrl();
+    let notificationResults: NotificationResult = { email_sent: false, whatsapp_sent: false };
     
-    // Insert into Supabase database
-    const { error } = await supabase
-      .from('consultations')
-      .insert([consultationData]);
+    try {
+      // Try to use the FastAPI endpoint first
+      console.log(`Submitting consultation to ${apiUrl}/consultation`);
       
-    if (error) {
-      console.error('Error saving consultation to database:', error);
-      throw new Error('Failed to save consultation');
+      const response = await fetch(`${apiUrl}/consultation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          date: formattedDate,
+          time: data.preferredTime,
+          service: data.service,
+          message: data.message || '',
+          status: 'pending',
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const result: ConsultationResponse = await response.json();
+      notificationResults = result.notifications;
+      console.log('Consultation booked successfully via API with notifications:', notificationResults);
+      
+    } catch (apiError) {
+      console.warn('API endpoint unavailable, falling back to direct Supabase:', apiError);
+      
+      // Fallback to direct Supabase insert
+      const consultationData = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        date: formattedDate,
+        time: data.preferredTime,
+        service: data.service,
+        message: data.message || '',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      };
+      
+      // Insert into Supabase database
+      const { error } = await supabase
+        .from('consultations')
+        .insert([consultationData]);
+        
+      if (error) {
+        console.error('Error saving consultation to database:', error);
+        throw new Error('Failed to save consultation');
+      }
+      
+      console.log('Consultation booked successfully via Supabase (no notifications sent)');
     }
     
-    console.log('Consultation booked successfully');
+    return notificationResults;
   } catch (error) {
     console.error('Error booking consultation:', error);
     throw error;
@@ -206,7 +260,7 @@ export const sendChatMessage = async (message: string): Promise<ChatResponse> =>
     const sessionId = getChatSessionId();
     
     // Get the API URL from environment or default to localhost in development
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const apiUrl = getApiUrl();
     
     console.log(`Sending message to ${apiUrl}/chat`);
     

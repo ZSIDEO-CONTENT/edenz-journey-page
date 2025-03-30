@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarIcon } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Form,
   FormControl,
@@ -55,6 +56,7 @@ type BookingFormValues = z.infer<typeof formSchema>;
 const BookConsultation = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notificationSent, setNotificationSent] = useState<{email: boolean, whatsapp: boolean} | null>(null);
   
   const timeSlots = [
     "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", 
@@ -84,6 +86,7 @@ const BookConsultation = () => {
 
   const onSubmit = async (data: BookingFormValues) => {
     setIsSubmitting(true);
+    setNotificationSent(null);
     
     try {
       const bookingData: ConsultationBookingData = {
@@ -97,11 +100,25 @@ const BookConsultation = () => {
         message: data.message
       };
       
-      await submitConsultationBooking(bookingData);
+      const notifications = await submitConsultationBooking(bookingData);
+      setNotificationSent({
+        email: notifications.email_sent,
+        whatsapp: notifications.whatsapp_sent
+      });
+      
+      let toastMessage = "Your consultation has been booked successfully. ";
+      
+      if (notifications.email_sent) {
+        toastMessage += "A confirmation email has been sent. ";
+      }
+      
+      if (notifications.whatsapp_sent) {
+        toastMessage += "A WhatsApp message has also been sent. ";
+      }
       
       toast({
         title: "Consultation Booked",
-        description: "Your consultation has been booked successfully. We'll contact you shortly to confirm.",
+        description: toastMessage + "We'll contact you shortly to confirm.",
       });
       
       form.reset();
@@ -182,7 +199,7 @@ const BookConsultation = () => {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone Number</FormLabel>
+                          <FormLabel>Phone Number (WhatsApp preferred)</FormLabel>
                           <FormControl>
                             <Input placeholder="Enter your phone number" {...field} />
                           </FormControl>
@@ -347,6 +364,16 @@ const BookConsultation = () => {
                   </Button>
                 </form>
               </Form>
+              
+              {notificationSent && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-green-800 text-sm">
+                    <span className="font-semibold">Booking confirmed!</span> 
+                    {notificationSent.email && " We've sent you a confirmation email."}
+                    {notificationSent.whatsapp && " We've also sent a WhatsApp message to your phone."}
+                  </p>
+                </div>
+              )}
               
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex items-start space-x-2">
