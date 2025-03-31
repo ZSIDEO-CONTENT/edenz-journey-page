@@ -1,4 +1,3 @@
-
 /**
  * API utility functions for form submissions and chat
  */
@@ -82,6 +81,68 @@ export interface ConsultationResponse {
   id: string;
   status: string;
   notifications: NotificationResult;
+}
+
+export interface StudentCredentials {
+  email: string;
+  password: string;
+}
+
+export interface StudentRegistration {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+}
+
+export interface StudentProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address?: string;
+  dob?: string;
+  bio?: string;
+  profile_picture?: string;
+  education?: {
+    degree: string;
+    institution: string;
+    yearCompleted: string;
+    gpa: string;
+  }[];
+  skills?: string[];
+}
+
+export interface DocumentUpload {
+  name: string;
+  type: string;
+  file_url: string;
+  user_id: string;
+  status?: string;
+  feedback?: string;
+  category_id?: string;
+  custom_name?: string;
+}
+
+export interface DocumentCategory {
+  id: string;
+  name: string;
+  description: string;
+  user_id?: string;
+  created_at: string;
+}
+
+export interface Document {
+  id: string;
+  name: string;
+  type: string;
+  file_url: string;
+  user_id: string;
+  status: string;
+  feedback?: string;
+  category_id?: string;
+  custom_name?: string;
+  created_at: string;
 }
 
 // Initialize Supabase client
@@ -437,4 +498,275 @@ export const createAdminUser = async (credentials: AdminCredentials): Promise<vo
     console.error('Error creating admin user:', error);
     throw error;
   }
+};
+
+/**
+ * Student registration
+ */
+export const registerStudent = async (data: StudentRegistration): Promise<void> => {
+  try {
+    console.log('Registering student:', data);
+    
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}/auth/register/student`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+        name: data.name,
+        phone: data.phone
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Registration failed');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error registering student:', error);
+    throw error;
+  }
+};
+
+/**
+ * Student login
+ */
+export const loginStudent = async (credentials: StudentCredentials): Promise<{ token: string; user: any }> => {
+  try {
+    const apiUrl = getApiUrl();
+    
+    // Create URLSearchParams for form submission
+    const formData = new URLSearchParams();
+    formData.append('username', credentials.email);
+    formData.append('password', credentials.password);
+    
+    const response = await fetch(`${apiUrl}/auth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Login failed');
+    }
+    
+    const data = await response.json();
+    
+    // Store token in localStorage
+    localStorage.setItem('edenz_student_token', data.access_token);
+    
+    return {
+      token: data.access_token,
+      user: data.user
+    };
+  } catch (error) {
+    console.error('Error logging in student:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get current student profile
+ */
+export const getStudentProfile = async (): Promise<StudentProfile> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch profile');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting student profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update student profile
+ */
+export const updateStudentProfile = async (profile: Partial<StudentProfile>): Promise<void> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/student/profile/${profile.id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profile),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update profile');
+    }
+  } catch (error) {
+    console.error('Error updating student profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload a document
+ */
+export const uploadDocument = async (document: DocumentUpload): Promise<{ document_id: string }> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/documents`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(document),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to upload document');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get student documents
+ */
+export const getStudentDocuments = async (studentId: string): Promise<Document[]> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/documents/${studentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch documents');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting student documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get document categories
+ */
+export const getDocumentCategories = async (studentId: string): Promise<DocumentCategory[]> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/documents/categories/${studentId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch document categories');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting document categories:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a document category
+ */
+export const createDocumentCategory = async (category: Partial<DocumentCategory>): Promise<{ category_id: string }> => {
+  try {
+    const apiUrl = getApiUrl();
+    const token = localStorage.getItem('edenz_student_token');
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/documents/categories`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(category),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create category');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating document category:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a student is authenticated
+ */
+export const isStudentAuthenticated = (): boolean => {
+  return !!localStorage.getItem('edenz_student_token');
+};
+
+/**
+ * Student logout
+ */
+export const logoutStudent = (): void => {
+  localStorage.removeItem('edenz_student_token');
 };

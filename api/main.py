@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 # Import routers
-from routers import chat, students, consultations, recommendations
+from api.routers import chat, students, consultations, recommendations, documents, auth
 
 # Initialize FastAPI app
 app = FastAPI(title="Edenz AI API")
@@ -23,6 +23,8 @@ app.include_router(chat.router)
 app.include_router(students.router)
 app.include_router(consultations.router)
 app.include_router(recommendations.router)
+app.include_router(documents.router)
+app.include_router(auth.router)
 
 @app.get("/health")
 async def health_check():
