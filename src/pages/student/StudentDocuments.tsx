@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   FileText, Upload, X, CheckCircle, Download, FileSearch,
@@ -16,8 +15,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import StudentLayout from '@/components/student/StudentLayout';
 
-// Document categories
-const documentCategories = [
+interface DocumentItem {
+  id: string;
+  name: string;
+  status: string;
+  date: string | null;
+  fileUrl?: string;
+  feedback?: string;
+}
+
+interface DocumentCategory {
+  id: string;
+  name: string;
+  description: string;
+  documents: DocumentItem[];
+}
+
+const documentCategories: DocumentCategory[] = [
   { 
     id: 'academic', 
     name: 'Academic Documents',
@@ -64,7 +78,7 @@ const documentCategories = [
 ];
 
 const StudentDocuments = () => {
-  const [categories, setCategories] = useState(documentCategories);
+  const [categories, setCategories] = useState<DocumentCategory[]>(documentCategories);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
   const [customDocName, setCustomDocName] = useState('');

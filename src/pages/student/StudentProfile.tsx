@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -22,8 +21,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StudentLayout from '@/components/student/StudentLayout';
 
-// Sample user data
-const sampleUserData = {
+interface Education {
+  degree: string;
+  institution: string;
+  yearCompleted: string;
+  gpa: string;
+}
+
+interface UserData {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  dob: string;
+  profileImage: string;
+  bio: string;
+  education: Education[];
+  skills: string[];
+}
+
+const sampleUserData: UserData = {
   name: 'Muhammad Ali',
   email: 'muhammad.ali@example.com',
   phone: '+92 300 1234567',
@@ -58,12 +75,15 @@ const educationFormSchema = z.object({
   gpa: z.string(),
 });
 
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+type EducationFormValues = z.infer<typeof educationFormSchema>;
+
 const StudentProfile = () => {
-  const [userData, setUserData] = useState(sampleUserData);
+  const [userData, setUserData] = useState<UserData>(sampleUserData);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const profileForm = useForm<z.infer<typeof profileFormSchema>>({
+  const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: userData.name,
@@ -75,7 +95,7 @@ const StudentProfile = () => {
     },
   });
 
-  const educationForm = useForm<z.infer<typeof educationFormSchema>>({
+  const educationForm = useForm<EducationFormValues>({
     resolver: zodResolver(educationFormSchema),
     defaultValues: {
       degree: userData.education[0]?.degree || '',
@@ -85,7 +105,7 @@ const StudentProfile = () => {
     },
   });
 
-  const onProfileSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+  const onProfileSubmit = async (values: ProfileFormValues) => {
     setIsLoading(true);
     
     try {
@@ -113,17 +133,17 @@ const StudentProfile = () => {
     }
   };
 
-  const onEducationSubmit = async (values: z.infer<typeof educationFormSchema>) => {
+  const onEducationSubmit = async (values: EducationFormValues) => {
     setIsLoading(true);
     
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Update education data
+      // Update education data with non-optional values
       setUserData({
         ...userData,
-        education: [values]
+        education: [values as Education]
       });
       
       toast({
