@@ -7,18 +7,18 @@ const Hero = () => {
   return (
     <section className="relative pt-28 pb-20 overflow-hidden">
       {/* Decorative blobs with enhanced animations */}
-      <div className="hero-blob h-[500px] w-[500px] right-[-200px] top-[-100px] opacity-70 animate-blob"></div>
-      <div className="hero-blob h-[600px] w-[600px] left-[-300px] bottom-[-200px] opacity-50 animate-blob animation-delay-2000"></div>
+      <div className="hero-blob h-[500px] w-[500px] right-[-200px] top-[-100px] opacity-70 animate-blob-slow"></div>
+      <div className="hero-blob h-[600px] w-[600px] left-[-300px] bottom-[-200px] opacity-50 animate-blob-slow animation-delay-2000"></div>
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid md:grid-cols-2 gap-10 items-center">
           <div className="space-y-6 md:pr-10 animate-fade-in">
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm">
-              <span className="animate-pulse mr-2">●</span> Pakistan's Premier Education Consultancy
+              <span className="animate-pulse-slow mr-2">●</span> Pakistan's Premier Education Consultancy
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-500 animate-pulse">Your Global Education</span> Journey Begins Here
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-500 animate-pulse-slow">Your Global Education</span> Journey Begins Here
             </h1>
             
             <p className="text-lg text-gray-600 md:pr-10">
@@ -30,7 +30,7 @@ const Hero = () => {
                 <Button size="lg" className="btn-primary group">
                   <MessageSquare className="mr-2 h-5 w-5 transition-transform group-hover:-translate-y-1 group-hover:animate-bounce" />
                   Chat with Edenz AI
-                  <Sparkles className="ml-2 h-4 w-4 text-yellow-300 animate-pulse" />
+                  <Sparkles className="ml-2 h-4 w-4 text-yellow-300 animate-pulse-slow" />
                 </Button>
               </Link>
               <Link to="/countries">
@@ -77,10 +77,10 @@ const Hero = () => {
             </div>
             
             {/* Floating elements with higher z-index and improved animations */}
-            <div className="absolute top-10 -left-14 glass-card rounded-2xl p-4 shadow-lg animate-float z-10 hover:scale-105 transition-transform duration-300">
+            <div className="absolute top-10 -left-14 glass-card rounded-2xl p-4 shadow-lg animate-float-slow z-10 hover:scale-105 transition-transform duration-300">
               <div className="flex items-center gap-3">
                 <div className="bg-edenz-green/10 rounded-full p-2">
-                  <GraduationCap className="h-6 w-6 text-primary animate-spin-slow" />
+                  <GraduationCap className="h-6 w-6 text-primary animate-spin-very-slow" />
                 </div>
                 <div>
                   <p className="font-medium">100%</p>
@@ -89,10 +89,10 @@ const Hero = () => {
               </div>
             </div>
             
-            <div className="absolute bottom-20 -right-10 glass-card rounded-2xl p-4 shadow-lg animate-float animation-delay-1000 z-10 hover:scale-105 transition-transform duration-300">
+            <div className="absolute bottom-20 -right-10 glass-card rounded-2xl p-4 shadow-lg animate-float-slow animation-delay-1000 z-10 hover:scale-105 transition-transform duration-300">
               <div className="flex items-center gap-3">
                 <div className="bg-edenz-green/10 rounded-full p-2">
-                  <Globe className="h-6 w-6 text-primary animate-spin-slow" />
+                  <Globe className="h-6 w-6 text-primary animate-spin-very-slow" />
                 </div>
                 <div>
                   <p className="font-medium">50+ Countries</p>

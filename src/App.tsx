@@ -16,6 +16,15 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Chat from "./pages/Chat";
 
+// Student Portal Routes
+import StudentLogin from "./pages/student/StudentLogin";
+import StudentRegister from "./pages/student/StudentRegister";
+import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentDocuments from "./pages/student/StudentDocuments";
+import StudentProfile from "./pages/student/StudentProfile";
+import StudentApplications from "./pages/student/StudentApplications";
+import StudentRecommendations from "./pages/student/StudentRecommendations";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -42,6 +51,50 @@ const App = () => (
                 <AdminDashboard />
               </ProtectedRoute>
             } 
+          />
+          
+          {/* Student Portal Routes */}
+          <Route path="/student/login" element={<StudentLogin />} />
+          <Route path="/student/register" element={<StudentRegister />} />
+          <Route 
+            path="/student/dashboard" 
+            element={
+              <ProtectedRoute>
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/student/documents" 
+            element={
+              <ProtectedRoute>
+                <StudentDocuments />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/student/profile" 
+            element={
+              <ProtectedRoute>
+                <StudentProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/student/applications" 
+            element={
+              <ProtectedRoute>
+                <StudentApplications />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/student/recommendations" 
+            element={
+              <ProtectedRoute>
+                <StudentRecommendations />
+              </ProtectedRoute>
+            }
           />
           
           {/* Catch-all route */}
