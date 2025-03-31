@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, X } from 'lucide-react';
+import { MessageCircle, Send, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -79,33 +79,43 @@ const ChatWidget = () => {
     setIsOpen(false);
   };
 
-  // Process messages to add booking button when appropriate
+  const goToFullChat = () => {
+    navigate('/chat');
+    setIsOpen(false);
+  };
+
+  // Process messages to add booking button when appropriate and format properly
   const processMessage = (content: string) => {
+    // Format the message for better readability - replace markdown formatting
+    let formattedContent = content
+      .replace(/\*\*/g, '') // Remove bold markers
+      .replace(/\*/g, '')   // Remove italic markers
+      .split('\n').map(line => line.trim()).filter(Boolean).join('\n\n'); // Proper line breaks
+    
     // If message contains booking suggestions, add a booking button
-    if ((content.includes("booking page") || 
-         content.includes("schedule a") ||
-         content.includes("book a consultation") ||
-         content.includes("consultation with Dr") ||
-         content.includes("direct you to our booking")) && 
-        content.includes("Taimoor")) {
+    if (content.toLowerCase().includes('book') || 
+        content.toLowerCase().includes('consultation') ||
+        content.toLowerCase().includes('advisor') ||
+        content.toLowerCase().includes('expert')) {
       return (
         <div>
-          {content}
+          <div className="whitespace-pre-wrap">{formattedContent}</div>
           <div className="mt-3">
+            <p className="mb-2 text-sm text-gray-600">Consultation Fee: 5000 PKR</p>
             <Button
               onClick={handleBookingRedirect}
               size="sm"
               className="bg-primary text-white"
             >
-              Go to Booking Page
+              Book Paid Consultation
             </Button>
           </div>
         </div>
       );
     }
     
-    // Regular message
-    return content;
+    // Regular message with proper formatting
+    return <div className="whitespace-pre-wrap">{formattedContent}</div>;
   };
 
   return (
@@ -113,7 +123,7 @@ const ChatWidget = () => {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button 
-            className="rounded-full h-14 w-14 p-0 bg-primary hover:bg-primary/90 shadow-lg"
+            className="rounded-full h-14 w-14 p-0 bg-primary hover:bg-primary/90 shadow-lg animate-bounce"
             onClick={() => setIsOpen(true)}
           >
             <MessageCircle className="h-6 w-6 text-white" />
@@ -123,14 +133,25 @@ const ChatWidget = () => {
           <div className="flex flex-col h-full">
             <SheetHeader className="bg-primary text-primary-foreground p-4 rounded-t-xl flex flex-row justify-between items-center">
               <SheetTitle className="text-left text-white">Chat with Edenz AI</SheetTitle>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                className="h-8 w-8 text-white hover:bg-primary/80"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={goToFullChat}
+                  className="h-8 w-8 text-white hover:bg-primary/80"
+                  title="Open full chat"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
+                  className="h-8 w-8 text-white hover:bg-primary/80"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </SheetHeader>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
