@@ -144,14 +144,17 @@ const BookConsultation = () => {
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                Free Consultation
+                Expert Consultation
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Book Your Free Consultation
+                Book Your Consultation with Our Experts
               </h1>
               <p className="text-gray-600 text-lg">
                 Schedule a personalized consultation with our education experts to discuss your study abroad plans and get guidance tailored to your needs.
               </p>
+              <div className="mt-6 inline-block bg-primary/10 text-primary p-3 rounded-lg font-medium">
+                Consultation Fee: 5000 PKR
+              </div>
             </div>
           </div>
         </section>
@@ -360,7 +363,7 @@ const BookConsultation = () => {
                     className="btn-primary w-full"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Booking...' : 'Book Consultation'}
+                    {isSubmitting ? 'Processing Payment...' : 'Pay 5000 PKR & Book Consultation'}
                   </Button>
                 </form>
               </Form>
@@ -384,7 +387,7 @@ const BookConsultation = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-600">
-                      Your consultation is completely free and non-obligatory. Our expert counselors will provide personalized guidance based on your academic profile and career goals.
+                      Get personalized guidance from our expert counselors based on your academic profile and career goals. The consultation fee is 5000 PKR.
                     </p>
                   </div>
                 </div>

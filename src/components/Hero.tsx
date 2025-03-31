@@ -26,9 +26,9 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link to="/book-consultation">
+              <Link to="/chat">
                 <Button size="lg" className="btn-primary">
-                  Free Consultation
+                  Chat with Edenz AI
                 </Button>
               </Link>
               <Link to="/countries">
