@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "api/.env"))
 
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")

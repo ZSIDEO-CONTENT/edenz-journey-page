@@ -2,6 +2,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import os
 
 # Import routers
 from api.routers import chat, students, consultations, recommendations, documents, auth
@@ -33,6 +34,6 @@ async def health_check():
     """
     return {"status": "healthy", "service": "Edenz AI API"}
 
-# Start the server with: uvicorn api.main:app --reload
+# Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
