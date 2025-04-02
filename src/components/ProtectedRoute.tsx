@@ -1,15 +1,17 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { isAuthenticated } from "@/lib/api";
+import { isAuthenticated, isStudentAuthenticated } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  requiresAdmin?: boolean;
+  requiresStudent?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiresAdmin = false, requiresStudent = false }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [auth, setAuth] = useState(false);
   const navigate = useNavigate();
@@ -17,17 +19,31 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const isAuth = await isAuthenticated();
-        setAuth(isAuth);
+        let isAuth = false;
         
-        if (!isAuth) {
-          toast({
-            title: "Authentication required",
-            description: "Please log in to access the admin area",
-            variant: "destructive",
-          });
-          navigate("/admin/login");
+        if (requiresAdmin) {
+          isAuth = await isAuthenticated();
+          if (!isAuth) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to access the admin area",
+              variant: "destructive",
+            });
+            navigate("/admin/login");
+          }
+        } else if (requiresStudent) {
+          isAuth = await isStudentAuthenticated();
+          if (!isAuth) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to access the student portal",
+              variant: "destructive",
+            });
+            navigate("/student/login");
+          }
         }
+        
+        setAuth(isAuth);
       } catch (error) {
         console.error("Authentication error:", error);
         setAuth(false);
@@ -42,7 +58,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, requiresAdmin, requiresStudent]);
 
   if (loading) {
     return (
@@ -54,7 +70,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!auth) {
-    return <Navigate to="/admin/login" />;
+    return <Navigate to={requiresAdmin ? "/admin/login" : "/student/login"} />;
   }
 
   return <>{children}</>;

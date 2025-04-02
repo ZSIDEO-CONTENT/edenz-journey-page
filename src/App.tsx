@@ -47,7 +47,7 @@ const App = () => (
           <Route 
             path="/admin/dashboard" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresAdmin>
                 <AdminDashboard />
               </ProtectedRoute>
             } 
@@ -59,7 +59,7 @@ const App = () => (
           <Route 
             path="/student/dashboard" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresStudent>
                 <StudentDashboard />
               </ProtectedRoute>
             }
@@ -67,7 +67,7 @@ const App = () => (
           <Route 
             path="/student/documents" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresStudent>
                 <StudentDocuments />
               </ProtectedRoute>
             }
@@ -75,7 +75,7 @@ const App = () => (
           <Route 
             path="/student/profile" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresStudent>
                 <StudentProfile />
               </ProtectedRoute>
             }
@@ -83,7 +83,7 @@ const App = () => (
           <Route 
             path="/student/applications" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresStudent>
                 <StudentApplications />
               </ProtectedRoute>
             }
@@ -91,7 +91,7 @@ const App = () => (
           <Route 
             path="/student/recommendations" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiresStudent>
                 <StudentRecommendations />
               </ProtectedRoute>
             }

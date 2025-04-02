@@ -1,16 +1,15 @@
 
-from fastapi import APIRouter, HTTPException, Request, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Request, status, UploadFile, File, Form, Depends, Header
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 import uuid
 from datetime import datetime
 import supabase
+from api.config import SUPABASE_URL, SUPABASE_KEY
 
 # Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
-supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
-supabase_client = supabase.create_client(supabase_url, supabase_key)
+supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -33,10 +32,41 @@ class DocumentCategory(BaseModel):
     description: str
     user_id: Optional[str] = None  # If null, it's a system category
 
+async def get_supabase_user(authorization: Optional[str] = Header(None)):
+    """Get the current user from Supabase token"""
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    
+    try:
+        # Extract the token from the Authorization header
+        token = authorization.replace("Bearer ", "")
+        
+        # Verify token with Supabase
+        response = supabase_client.auth.get_user(token)
+        if not response or not hasattr(response, "user"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        
+        return response.user
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication error: {str(e)}"
+        )
+
 @router.post("")
-async def upload_document(document: DocumentUpload):
+async def upload_document(document: DocumentUpload, current_user: dict = Depends(get_supabase_user)):
     """Upload a new document"""
     try:
+        # Verify user owns this document
+        if document.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to upload for this user")
+            
         result = supabase_client.table("documents").insert({
             "name": document.name,
             "type": document.type,
@@ -58,9 +88,18 @@ async def upload_document(document: DocumentUpload):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{student_id}")
-async def get_student_documents(student_id: str):
+async def get_student_documents(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Get all documents for a student"""
     try:
+        # Verify user is fetching their own documents
+        if student_id != current_user.id:
+            # Check if user is admin
+            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
+            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+            
+            if not is_admin:
+                raise HTTPException(status_code=403, detail="Not authorized to view these documents")
+        
         response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
         
         if not response or not hasattr(response, "data"):
@@ -73,9 +112,19 @@ async def get_student_documents(student_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{document_id}/feedback")
-async def update_document_feedback(document_id: str, feedback: DocumentFeedback):
+async def update_document_feedback(document_id: str, feedback: DocumentFeedback, current_user: dict = Depends(get_supabase_user)):
     """Update document status and feedback"""
     try:
+        # Check if user is admin
+        user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
+        is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+        
+        if not is_admin:
+            # Check if document belongs to current user
+            doc_response = supabase_client.table("documents").select("user_id").eq("id", document_id).execute()
+            if not doc_response or not hasattr(doc_response, "data") or len(doc_response.data) == 0 or doc_response.data[0]["user_id"] != current_user.id:
+                raise HTTPException(status_code=403, detail="Not authorized to update this document")
+        
         result = supabase_client.table("documents").update({
             "status": feedback.status,
             "feedback": feedback.feedback,
@@ -92,9 +141,18 @@ async def update_document_feedback(document_id: str, feedback: DocumentFeedback)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/categories/{student_id}")
-async def get_document_categories(student_id: str):
+async def get_document_categories(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Get document categories for a student"""
     try:
+        # Verify user is fetching their own categories
+        if student_id != current_user.id:
+            # Check if user is admin
+            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
+            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+            
+            if not is_admin:
+                raise HTTPException(status_code=403, detail="Not authorized to view these categories")
+        
         # Get system categories first
         system_categories = supabase_client.table("document_categories").select("*").is_("user_id", "null").execute()
         
@@ -116,9 +174,18 @@ async def get_document_categories(student_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/categories")
-async def create_document_category(category: DocumentCategory):
+async def create_document_category(category: DocumentCategory, current_user: dict = Depends(get_supabase_user)):
     """Create a new document category"""
     try:
+        # If category has user_id, verify it's the current user
+        if category.user_id and category.user_id != current_user.id:
+            # Check if user is admin
+            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
+            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+            
+            if not is_admin:
+                raise HTTPException(status_code=403, detail="Not authorized to create category for this user")
+        
         result = supabase_client.table("document_categories").insert({
             "name": category.name,
             "description": category.description,

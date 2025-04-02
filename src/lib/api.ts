@@ -507,26 +507,36 @@ export const registerStudent = async (data: StudentRegistration): Promise<void> 
   try {
     console.log('Registering student:', data);
     
-    const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/auth/register/student`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password,
-        name: data.name,
-        phone: data.phone
-      }),
+    // First register in Supabase Auth
+    const { error: authError, data: authData } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Registration failed');
+    if (authError) {
+      throw new Error(authError.message);
     }
     
-    return await response.json();
+    if (!authData || !authData.user) {
+      throw new Error('Registration failed');
+    }
+    
+    // Then add additional user data to the students table
+    const { error: dbError } = await supabase
+      .from('students')
+      .insert([{
+        id: authData.user.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        created_at: new Date().toISOString(),
+      }]);
+      
+    if (dbError) {
+      throw new Error(dbError.message);
+    }
+    
+    return;
   } catch (error) {
     console.error('Error registering student:', error);
     throw error;
@@ -538,34 +548,38 @@ export const registerStudent = async (data: StudentRegistration): Promise<void> 
  */
 export const loginStudent = async (credentials: StudentCredentials): Promise<{ token: string; user: any }> => {
   try {
-    const apiUrl = getApiUrl();
-    
-    // Create URLSearchParams for form submission
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.email);
-    formData.append('password', credentials.password);
-    
-    const response = await fetch(`${apiUrl}/auth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Login failed');
+    if (error) {
+      throw new Error(error.message);
     }
     
-    const data = await response.json();
+    if (!data || !data.session || !data.user) {
+      throw new Error('Login failed');
+    }
     
-    // Store token in localStorage
-    localStorage.setItem('edenz_student_token', data.access_token);
+    // Get user details from students table
+    const { data: userData, error: userError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+      
+    if (userError) {
+      console.warn('Error fetching user data:', userError);
+    }
     
     return {
-      token: data.access_token,
-      user: data.user
+      token: data.session.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: userData?.name || '',
+        phone: userData?.phone || '',
+      }
     };
   } catch (error) {
     console.error('Error logging in student:', error);
@@ -578,25 +592,44 @@ export const loginStudent = async (credentials: StudentCredentials): Promise<{ t
  */
 export const getStudentProfile = async (): Promise<StudentProfile> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/auth/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
+    // Get user data from students table
+    const { data: userData, error: userError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (userError) {
       throw new Error('Failed to fetch profile');
     }
     
-    return await response.json();
+    // Get education data
+    const { data: educationData, error: educationError } = await supabase
+      .from('education')
+      .select('*')
+      .eq('student_id', session.user.id);
+      
+    if (educationError) {
+      console.warn('Error fetching education data:', educationError);
+    }
+    
+    return {
+      id: session.user.id,
+      name: userData?.name || '',
+      email: userData?.email || session.user.email || '',
+      phone: userData?.phone || '',
+      address: userData?.address || '',
+      dob: userData?.dob || '',
+      bio: userData?.bio || '',
+      profile_picture: userData?.profile_picture || '',
+      education: educationData || []
+    };
   } catch (error) {
     console.error('Error getting student profile:', error);
     throw error;
@@ -608,27 +641,67 @@ export const getStudentProfile = async (): Promise<StudentProfile> => {
  */
 export const updateStudentProfile = async (profile: Partial<StudentProfile>): Promise<void> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/student/profile/${profile.id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profile),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to update profile');
+    const { error } = await supabase
+      .from('students')
+      .update({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address,
+        dob: profile.dob,
+        bio: profile.bio,
+        profile_picture: profile.profile_picture,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', session.user.id);
+      
+    if (error) {
+      throw new Error(`Failed to update profile: ${error.message}`);
     }
   } catch (error) {
     console.error('Error updating student profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add education entry
+ */
+export const addEducation = async (education: {
+  degree: string;
+  institution: string;
+  yearCompleted: string;
+  gpa: string;
+}): Promise<void> => {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error('Authentication required');
+    }
+    
+    const { error } = await supabase
+      .from('education')
+      .insert([{
+        student_id: session.user.id,
+        degree: education.degree,
+        institution: education.institution,
+        year_completed: education.yearCompleted,
+        gpa: education.gpa,
+        created_at: new Date().toISOString()
+      }]);
+      
+    if (error) {
+      throw new Error(`Failed to add education: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Error adding education:', error);
     throw error;
   }
 };
@@ -638,27 +711,38 @@ export const updateStudentProfile = async (profile: Partial<StudentProfile>): Pr
  */
 export const uploadDocument = async (document: DocumentUpload): Promise<{ document_id: string }> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/documents`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(document),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to upload document');
+    // Ensure user can only upload documents for themselves
+    if (document.user_id !== session.user.id) {
+      throw new Error('Not authorized to upload for this user');
     }
     
-    return await response.json();
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
+        name: document.name,
+        type: document.type,
+        file_url: document.file_url,
+        user_id: document.user_id,
+        status: document.status || 'pending',
+        feedback: document.feedback,
+        category_id: document.category_id,
+        custom_name: document.custom_name,
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+      
+    if (error) {
+      throw new Error(`Failed to upload document: ${error.message}`);
+    }
+    
+    return { document_id: data.id };
   } catch (error) {
     console.error('Error uploading document:', error);
     throw error;
@@ -666,29 +750,62 @@ export const uploadDocument = async (document: DocumentUpload): Promise<{ docume
 };
 
 /**
- * Get student documents
+ * Upload file to Supabase Storage
  */
-export const getStudentDocuments = async (studentId: string): Promise<Document[]> => {
+export const uploadFile = async (file: File, bucket: string = 'documents'): Promise<string> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/documents/${studentId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    // Create a unique file name
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
     
-    if (!response.ok) {
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file);
+      
+    if (error) {
+      throw new Error(`Failed to upload file: ${error.message}`);
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(fileName);
+      
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get student documents
+ */
+export const getStudentDocuments = async (): Promise<Document[]> => {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error('Authentication required');
+    }
+    
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('user_id', session.user.id);
+      
+    if (error) {
       throw new Error('Failed to fetch documents');
     }
     
-    return await response.json();
+    return data || [];
   } catch (error) {
     console.error('Error getting student documents:', error);
     throw error;
@@ -698,27 +815,35 @@ export const getStudentDocuments = async (studentId: string): Promise<Document[]
 /**
  * Get document categories
  */
-export const getDocumentCategories = async (studentId: string): Promise<DocumentCategory[]> => {
+export const getDocumentCategories = async (): Promise<DocumentCategory[]> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/documents/categories/${studentId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch document categories');
+    // Get system categories
+    const { data: systemCategories, error: systemError } = await supabase
+      .from('document_categories')
+      .select('*')
+      .is('user_id', null);
+      
+    if (systemError) {
+      throw new Error('Failed to fetch system categories');
     }
     
-    return await response.json();
+    // Get user's custom categories
+    const { data: userCategories, error: userError } = await supabase
+      .from('document_categories')
+      .select('*')
+      .eq('user_id', session.user.id);
+      
+    if (userError) {
+      throw new Error('Failed to fetch user categories');
+    }
+    
+    return [...(systemCategories || []), ...(userCategories || [])];
   } catch (error) {
     console.error('Error getting document categories:', error);
     throw error;
@@ -730,27 +855,28 @@ export const getDocumentCategories = async (studentId: string): Promise<Document
  */
 export const createDocumentCategory = async (category: Partial<DocumentCategory>): Promise<{ category_id: string }> => {
   try {
-    const apiUrl = getApiUrl();
-    const token = localStorage.getItem('edenz_student_token');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (!token) {
+    if (sessionError || !session) {
       throw new Error('Authentication required');
     }
     
-    const response = await fetch(`${apiUrl}/documents/categories`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(category),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to create category');
+    const { data, error } = await supabase
+      .from('document_categories')
+      .insert({
+        name: category.name,
+        description: category.description,
+        user_id: session.user.id,
+        created_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+      
+    if (error) {
+      throw new Error(`Failed to create category: ${error.message}`);
     }
     
-    return await response.json();
+    return { category_id: data.id };
   } catch (error) {
     console.error('Error creating document category:', error);
     throw error;
@@ -760,13 +886,27 @@ export const createDocumentCategory = async (category: Partial<DocumentCategory>
 /**
  * Check if a student is authenticated
  */
-export const isStudentAuthenticated = (): boolean => {
-  return !!localStorage.getItem('edenz_student_token');
+export const isStudentAuthenticated = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch (error) {
+    console.error('Student auth check error:', error);
+    return false;
+  }
 };
 
 /**
  * Student logout
  */
-export const logoutStudent = (): void => {
-  localStorage.removeItem('edenz_student_token');
+export const logoutStudent = async (): Promise<void> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error during logout:', error);
+    throw error;
+  }
 };
