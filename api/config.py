@@ -3,7 +3,18 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "api/.env"))
+# Try different paths to find the .env file
+env_paths = [
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),  # Root project folder
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "api/.env"),  # api folder
+    os.path.join(os.path.dirname(__file__), ".env"),  # current directory
+]
+
+# Try to load from each possible location
+for env_path in env_paths:
+    if os.path.exists(env_path):
+        load_dotenv(dotenv_path=env_path)
+        break
 
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
