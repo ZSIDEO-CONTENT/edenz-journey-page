@@ -5,7 +5,7 @@ import uvicorn
 import os
 
 # Import routers
-from api.routers import chat, students, consultations, recommendations, documents, auth
+from api.routers import chat, students, consultations, recommendations, documents, auth, questionnaires
 
 # Initialize FastAPI app
 app = FastAPI(title="Edenz AI API")
@@ -26,6 +26,7 @@ app.include_router(consultations.router)
 app.include_router(recommendations.router)
 app.include_router(documents.router)
 app.include_router(auth.router)
+app.include_router(questionnaires.router)
 
 @app.get("/health")
 async def health_check():

@@ -32,66 +32,46 @@ class DocumentCategory(BaseModel):
     description: str
     user_id: Optional[str] = None  # If null, it's a system category
 
+class DocumentVerification(BaseModel):
+    document_id: str
+    verification_result: Dict[str, Any]
+    verification_status: str  # "verified", "failed", "manual_review"
+    officer_id: Optional[str] = None
+
 async def get_supabase_user(authorization: Optional[str] = Header(None)):
     """Get the current user from Supabase token"""
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    
-    try:
-        # Extract the token from the Authorization header
-        token = authorization.replace("Bearer ", "")
-        
-        # Verify token with Supabase
-        response = supabase_client.auth.get_user(token)
-        if not response or not hasattr(response, "user"):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-        
-        return response.user
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication error: {str(e)}"
-        )
+    # ... keep existing code (authentication function)
 
 @router.post("")
 async def upload_document(document: DocumentUpload, current_user: dict = Depends(get_supabase_user)):
     """Upload a new document"""
-    try:
-        # Verify user owns this document
-        if document.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to upload for this user")
-            
-        result = supabase_client.table("documents").insert({
-            "name": document.name,
-            "type": document.type,
-            "file_url": document.file_url,
-            "user_id": document.user_id,
-            "status": document.status,
-            "category_id": document.category_id,
-            "custom_name": document.custom_name,
-            "created_at": datetime.now().isoformat()
-        }).execute()
-        
-        if result and hasattr(result, "data") and len(result.data) > 0:
-            return {"success": True, "message": "Document uploaded successfully", "document_id": result.data[0]["id"]}
-        
-        raise HTTPException(status_code=500, detail="Failed to upload document")
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=str(e))
+    # ... keep existing code (upload document function)
 
 @router.get("/{student_id}")
 async def get_student_documents(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Get all documents for a student"""
+    # ... keep existing code (get documents function)
+
+@router.put("/{document_id}/feedback")
+async def update_document_feedback(document_id: str, feedback: DocumentFeedback, current_user: dict = Depends(get_supabase_user)):
+    """Update document status and feedback"""
+    # ... keep existing code (feedback function)
+
+@router.get("/categories/{student_id}")
+async def get_document_categories(student_id: str, current_user: dict = Depends(get_supabase_user)):
+    """Get document categories for a student"""
+    # ... keep existing code (get categories function)
+
+@router.post("/categories")
+async def create_document_category(category: DocumentCategory, current_user: dict = Depends(get_supabase_user)):
+    """Create a new document category"""
+    # ... keep existing code (create category function)
+
+@router.get("/required/{student_id}")
+async def get_required_documents(student_id: str, destination_country: Optional[str] = None, current_user: dict = Depends(get_supabase_user)):
+    """Get required documents for a student based on their destination country"""
     try:
-        # Verify user is fetching their own documents
+        # Verify user is fetching their own required documents
         if student_id != current_user.id:
             # Check if user is admin
             user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
@@ -100,103 +80,139 @@ async def get_student_documents(student_id: str, current_user: dict = Depends(ge
             if not is_admin:
                 raise HTTPException(status_code=403, detail="Not authorized to view these documents")
         
-        response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
+        # If destination country not provided, get it from student profile
+        if not destination_country:
+            student_response = supabase_client.table("students").select("preferred_country").eq("id", student_id).execute()
+            
+            if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+                raise HTTPException(status_code=404, detail="Student not found")
+            
+            destination_country = student_response.data[0].get("preferred_country")
         
-        if not response or not hasattr(response, "data"):
-            raise HTTPException(status_code=500, detail="Failed to fetch documents")
+        # Get base required documents (required for all countries)
+        base_docs_response = supabase_client.table("required_documents").select("*").is_("country_code", "null").execute()
         
-        return response.data
+        base_required_docs = []
+        if base_docs_response and hasattr(base_docs_response, "data"):
+            base_required_docs = base_docs_response.data
+        
+        # Get country-specific required documents
+        country_docs = []
+        if destination_country:
+            country_docs_response = supabase_client.table("required_documents").select("*").eq("country_code", destination_country.lower()).execute()
+            
+            if country_docs_response and hasattr(country_docs_response, "data"):
+                country_docs = country_docs_response.data
+        
+        # Combine both sets of documents, with country-specific ones overriding base ones
+        all_required_docs = base_required_docs.copy()
+        
+        # Add country-specific docs, overriding base docs with the same type
+        for doc in country_docs:
+            # Check if this document type already exists in base docs
+            existing_index = next((i for i, base_doc in enumerate(all_required_docs) if base_doc["type"] == doc["type"]), None)
+            
+            if existing_index is not None:
+                # Replace the base doc with the country-specific one
+                all_required_docs[existing_index] = doc
+            else:
+                # Add new country-specific doc
+                all_required_docs.append(doc)
+        
+        # Get documents already submitted by student
+        submitted_docs_response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
+        
+        submitted_docs = {}
+        if submitted_docs_response and hasattr(submitted_docs_response, "data"):
+            for doc in submitted_docs_response.data:
+                submitted_docs[doc["type"]] = doc
+        
+        # Mark required documents as submitted or not
+        required_docs_with_status = []
+        for doc in all_required_docs:
+            doc_copy = doc.copy()
+            doc_copy["submitted"] = doc["type"] in submitted_docs
+            
+            if doc_copy["submitted"]:
+                doc_copy["document_id"] = submitted_docs[doc["type"]]["id"]
+                doc_copy["status"] = submitted_docs[doc["type"]]["status"]
+                doc_copy["feedback"] = submitted_docs[doc["type"]]["feedback"]
+            
+            required_docs_with_status.append(doc_copy)
+        
+        return required_docs_with_status
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/{document_id}/feedback")
-async def update_document_feedback(document_id: str, feedback: DocumentFeedback, current_user: dict = Depends(get_supabase_user)):
-    """Update document status and feedback"""
+@router.post("/{document_id}/verify")
+async def verify_document(document_id: str, verification: DocumentVerification, current_user: dict = Depends(get_supabase_user)):
+    """Record verification results for a document (admin only)"""
     try:
         # Check if user is admin
         user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
         is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
         
         if not is_admin:
-            # Check if document belongs to current user
-            doc_response = supabase_client.table("documents").select("user_id").eq("id", document_id).execute()
-            if not doc_response or not hasattr(doc_response, "data") or len(doc_response.data) == 0 or doc_response.data[0]["user_id"] != current_user.id:
-                raise HTTPException(status_code=403, detail="Not authorized to update this document")
+            raise HTTPException(status_code=403, detail="Not authorized to verify documents")
         
-        result = supabase_client.table("documents").update({
-            "status": feedback.status,
-            "feedback": feedback.feedback,
+        # Update the document verification status
+        doc_update = {
+            "status": verification.verification_status,
             "updated_at": datetime.now().isoformat()
-        }).eq("id", document_id).execute()
+        }
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
+        if verification.verification_status == "failed":
+            doc_update["feedback"] = "Document verification failed. Please check the issues and resubmit."
+        elif verification.verification_status == "manual_review":
+            doc_update["feedback"] = "Document requires manual review by our team."
+        
+        # Update the document
+        doc_result = supabase_client.table("documents").update(doc_update).eq("id", document_id).execute()
+        
+        if not doc_result or not hasattr(doc_result, "data") or len(doc_result.data) == 0:
             raise HTTPException(status_code=404, detail="Document not found")
         
-        return {"success": True, "message": "Document feedback updated successfully"}
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/categories/{student_id}")
-async def get_document_categories(student_id: str, current_user: dict = Depends(get_supabase_user)):
-    """Get document categories for a student"""
-    try:
-        # Verify user is fetching their own categories
-        if student_id != current_user.id:
-            # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
-                raise HTTPException(status_code=403, detail="Not authorized to view these categories")
-        
-        # Get system categories first
-        system_categories = supabase_client.table("document_categories").select("*").is_("user_id", "null").execute()
-        
-        # Get student custom categories
-        user_categories = supabase_client.table("document_categories").select("*").eq("user_id", student_id).execute()
-        
-        # Combine results
-        categories = []
-        if system_categories and hasattr(system_categories, "data"):
-            categories.extend(system_categories.data)
-        
-        if user_categories and hasattr(user_categories, "data"):
-            categories.extend(user_categories.data)
-        
-        return categories
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/categories")
-async def create_document_category(category: DocumentCategory, current_user: dict = Depends(get_supabase_user)):
-    """Create a new document category"""
-    try:
-        # If category has user_id, verify it's the current user
-        if category.user_id and category.user_id != current_user.id:
-            # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
-                raise HTTPException(status_code=403, detail="Not authorized to create category for this user")
-        
-        result = supabase_client.table("document_categories").insert({
-            "name": category.name,
-            "description": category.description,
-            "user_id": category.user_id,
+        # Store verification data
+        verify_result = supabase_client.table("document_verifications").insert({
+            "document_id": document_id,
+            "verification_result": verification.verification_result,
+            "verification_status": verification.verification_status,
+            "officer_id": verification.officer_id or current_user.id,
             "created_at": datetime.now().isoformat()
         }).execute()
         
-        if result and hasattr(result, "data") and len(result.data) > 0:
-            return {"success": True, "message": "Category created successfully", "category_id": result.data[0]["id"]}
+        if not verify_result or not hasattr(verify_result, "data"):
+            raise HTTPException(status_code=500, detail="Failed to store verification data")
         
-        raise HTTPException(status_code=500, detail="Failed to create category")
+        return {"success": True, "message": "Document verification recorded successfully"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/templates/{document_type}")
+async def get_document_template(document_type: str, current_user: dict = Depends(get_supabase_user)):
+    """Get a template or example for a specific document type"""
+    try:
+        # Get the template from the database
+        template_response = supabase_client.table("document_templates").select("*").eq("document_type", document_type).execute()
+        
+        if not template_response or not hasattr(template_response, "data") or len(template_response.data) == 0:
+            raise HTTPException(status_code=404, detail=f"Template for {document_type} not found")
+        
+        template = template_response.data[0]
+        
+        return {
+            "document_type": template["document_type"],
+            "title": template["title"],
+            "description": template["description"],
+            "sample_url": template["sample_url"],
+            "instructions": template["instructions"],
+            "common_mistakes": template["common_mistakes"]
+        }
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
