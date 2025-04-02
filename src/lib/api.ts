@@ -888,8 +888,20 @@ export const createDocumentCategory = async (category: Partial<DocumentCategory>
  */
 export const isStudentAuthenticated = async (): Promise<boolean> => {
   try {
-    const { data } = await supabase.auth.getSession();
-    return !!data.session;
+    const token = localStorage.getItem('studentToken');
+    if (!token) {
+      return false;
+    }
+    
+    // Verify the token by making a request to the /auth/me endpoint
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    return response.ok;
   } catch (error) {
     console.error('Student auth check error:', error);
     return false;
@@ -901,10 +913,11 @@ export const isStudentAuthenticated = async (): Promise<boolean> => {
  */
 export const logoutStudent = async (): Promise<void> => {
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      throw error;
-    }
+    // Remove token from localStorage
+    localStorage.removeItem('studentToken');
+    localStorage.removeItem('studentUser');
+    
+    // No need to call Supabase signOut since we're using JWT tokens
   } catch (error) {
     console.error('Error during logout:', error);
     throw error;

@@ -40,24 +40,28 @@ const StudentLogin = () => {
     setIsLoading(true);
     
     try {
-      // Replace with actual API call when backend is ready
-      const response = await fetch('/api/student/login', {
+      // Send login request to the proper API endpoint
+      const response = await fetch('/api/auth/token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify(values),
+        body: new URLSearchParams({
+          username: values.email, // OAuth2 expects 'username' even for email
+          password: values.password,
+          grant_type: 'password'
+        }),
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Login failed');
+        throw new Error(error.detail || 'Login failed');
       }
       
       const data = await response.json();
       
       // Store the token and user info in localStorage
-      localStorage.setItem('studentToken', data.token);
+      localStorage.setItem('studentToken', data.access_token);
       localStorage.setItem('studentUser', JSON.stringify(data.user));
       
       toast({
@@ -68,19 +72,13 @@ const StudentLogin = () => {
       // Redirect to dashboard
       navigate('/student/dashboard');
     } catch (error) {
-      // For now, simulate successful login for demonstration
-      console.log('Login error (simulating success):', error);
-      
-      // Simulate successful login
-      localStorage.setItem('studentToken', 'demo-token');
-      localStorage.setItem('studentUser', JSON.stringify({ name: 'Demo Student' }));
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
       
       toast({
-        title: 'Demo mode',
-        description: 'Logged in with demo account',
+        title: 'Login failed',
+        description: errorMessage,
+        variant: 'destructive',
       });
-      
-      navigate('/student/dashboard');
     } finally {
       setIsLoading(false);
     }

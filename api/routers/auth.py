@@ -1,15 +1,19 @@
 
 from fastapi import APIRouter, HTTPException, Request, status, Depends, Header
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import supabase
-from api.config import SUPABASE_URL, SUPABASE_KEY
+from api.config import SUPABASE_URL, SUPABASE_KEY, JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from jose import JWTError, jwt
 
 # Initialize Supabase client
 supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Initialize OAuth2 Bearer for token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -28,6 +32,17 @@ class StudentRegister(BaseModel):
     email: str
     password: str
     phone: str
+
+# Helper function to create JWT token
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
 
 async def get_supabase_user(authorization: Optional[str] = Header(None)):
     """Get the current user from Supabase token"""
@@ -56,7 +71,7 @@ async def get_supabase_user(authorization: Optional[str] = Header(None)):
             detail=f"Authentication error: {str(e)}"
         )
 
-@router.post("/register/student")
+@router.post("/register/student", status_code=status.HTTP_201_CREATED)
 async def register_student(user: StudentRegister):
     """Register a new student"""
     try:

@@ -49,18 +49,24 @@ const StudentRegister = () => {
     setIsLoading(true);
     
     try {
-      // Replace with actual API call when backend is ready
-      const response = await fetch('/api/student/register', {
+      // Send registration request to the actual API endpoint
+      const response = await fetch('/api/auth/register/student', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          phone: values.phone,
+        }),
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Registration failed');
+        throw new Error(data.detail || 'Registration failed');
       }
       
       toast({
@@ -71,15 +77,13 @@ const StudentRegister = () => {
       // Redirect to login page
       navigate('/student/login');
     } catch (error) {
-      // For demo purposes, show success toast and redirect
-      console.log('Registration error (simulating success):', error);
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       
       toast({
-        title: 'Demo mode',
-        description: 'Registration successful in demo mode',
+        title: 'Registration failed',
+        description: errorMessage,
+        variant: 'destructive',
       });
-      
-      navigate('/student/login');
     } finally {
       setIsLoading(false);
     }
