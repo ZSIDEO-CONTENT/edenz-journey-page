@@ -9,50 +9,107 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import StudentLayout from '@/components/student/StudentLayout';
+import { useToast } from '@/hooks/use-toast';
 
-// Sample data for demonstration
-const sampleUserData = {
-  name: 'Muhammad Ali',
-  email: 'muhammad.ali@example.com',
-  documentsUploaded: 7,
-  documentsRequired: 12,
-  applications: [
-    { id: 1, university: 'University of London', program: 'MS Computer Science', status: 'pending', progress: 60 },
-    { id: 2, university: 'Imperial College London', program: 'MS Data Science', status: 'submitted', progress: 80 },
-  ],
-  notifications: [
-    { id: 1, message: 'Your passport copy needs to be updated', read: false, date: '2023-10-15' },
-    { id: 2, message: 'Application to University of London has been submitted', read: true, date: '2023-10-12' },
-    { id: 3, message: 'Your IELTS score has been verified', read: true, date: '2023-10-10' },
-  ]
-};
+interface UserData {
+  name: string;
+  email: string;
+  documentsUploaded: number;
+  documentsRequired: number;
+  applications: {
+    id: number;
+    university: string;
+    program: string;
+    status: string;
+    progress: number;
+  }[];
+  notifications: {
+    id: number;
+    message: string;
+    read: boolean;
+    date: string;
+  }[];
+}
 
 const StudentDashboard = () => {
-  const [userData, setUserData] = useState(sampleUserData);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate API call to fetch user data
     const fetchUserData = async () => {
       try {
-        // Replace with actual API call when backend is ready
-        // const response = await fetch('/api/student/dashboard');
-        // const data = await response.json();
-        // setUserData(data);
+        setIsLoading(true);
         
-        // For demo, use sample data with a delay to simulate loading
-        setTimeout(() => {
-          setUserData(sampleUserData);
-          setIsLoading(false);
-        }, 1000);
+        // Get user info from localStorage
+        const userString = localStorage.getItem('studentUser');
+        if (!userString) {
+          throw new Error('User data not found');
+        }
+        
+        const user = JSON.parse(userString);
+        
+        // For now, we'll create a simple dashboard with the user's info
+        // In a production app, you would fetch more data from your API
+        const dashboardData: UserData = {
+          name: user.name || 'Student',
+          email: user.email || '',
+          documentsUploaded: 0,
+          documentsRequired: 5,
+          applications: [],
+          notifications: [
+            { 
+              id: 1, 
+              message: 'Welcome to your student portal. Please complete your profile and upload required documents.',
+              read: false,
+              date: new Date().toISOString().split('T')[0]
+            }
+          ]
+        };
+        
+        // Try to fetch more student data if API is available
+        try {
+          const token = localStorage.getItem('studentToken');
+          if (token) {
+            const response = await fetch('http://localhost:8000/students/dashboard', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              const apiData = await response.json();
+              // Merge API data with basic user data
+              dashboardData.documentsUploaded = apiData.documents_uploaded || 0;
+              dashboardData.documentsRequired = apiData.documents_required || 5;
+              if (apiData.applications) {
+                dashboardData.applications = apiData.applications;
+              }
+              if (apiData.notifications) {
+                dashboardData.notifications = apiData.notifications;
+              }
+            }
+          }
+        } catch (apiError) {
+          console.warn('Could not fetch additional dashboard data:', apiError);
+          // Continue with basic user data
+        }
+        
+        setUserData(dashboardData);
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error loading dashboard:', error);
+        toast({
+          title: 'Error loading dashboard',
+          description: 'Please try logging in again',
+          variant: 'destructive',
+        });
+      } finally {
         setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [toast]);
 
   return (
     <StudentLayout title="Dashboard">
@@ -68,7 +125,7 @@ const StudentDashboard = () => {
             <div className="h-64 bg-muted rounded-lg animate-pulse"></div>
             <div className="h-48 bg-muted rounded-lg animate-pulse"></div>
           </div>
-        ) : (
+        ) : userData ? (
           <>
             <div className="mb-8">
               <h2 className="text-2xl font-semibold mb-2">Welcome back, {userData.name}!</h2>
@@ -156,29 +213,29 @@ const StudentDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {userData.applications.map((app) => (
-                    <div key={app.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <h3 className="font-semibold">{app.university}</h3>
-                          <p className="text-sm text-muted-foreground">{app.program}</p>
+                  {userData.applications.length > 0 ? (
+                    userData.applications.map((app) => (
+                      <div key={app.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <div>
+                            <h3 className="font-semibold">{app.university}</h3>
+                            <p className="text-sm text-muted-foreground">{app.program}</p>
+                          </div>
+                          <div className="flex items-center">
+                            {app.status === 'pending' ? (
+                              <Clock className="h-5 w-5 text-amber-500 mr-2" />
+                            ) : app.status === 'submitted' ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                            ) : (
+                              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                            )}
+                            <span className="capitalize">{app.status}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          {app.status === 'pending' ? (
-                            <Clock className="h-5 w-5 text-amber-500 mr-2" />
-                          ) : app.status === 'submitted' ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
-                          ) : (
-                            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                          )}
-                          <span className="capitalize">{app.status}</span>
-                        </div>
+                        <Progress value={app.progress} className="h-2" />
                       </div>
-                      <Progress value={app.progress} className="h-2" />
-                    </div>
-                  ))}
-
-                  {userData.applications.length === 0 && (
+                    ))
+                  ) : (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground">No applications yet.</p>
                       <Button variant="outline" className="mt-2">
@@ -239,6 +296,14 @@ const StudentDashboard = () => {
               </CardContent>
             </Card>
           </>
+        ) : (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold">Login session expired</h2>
+            <p className="text-muted-foreground mt-2">Please log in again to view your dashboard</p>
+            <Link to="/student/login">
+              <Button className="mt-4">Go to login</Button>
+            </Link>
+          </div>
         )}
       </div>
     </StudentLayout>
