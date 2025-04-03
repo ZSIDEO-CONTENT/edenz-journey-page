@@ -1,40 +1,39 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from api.routers import auth, students, documents, recommendations, consultations, chat, questionnaires, processing
 import os
 
-# Import routers
-from api.routers import chat, students, consultations, recommendations, documents, auth, questionnaires
-
-# Initialize FastAPI app
-app = FastAPI(title="Edenz AI API")
+# Create FastAPI app
+app = FastAPI(title="Edenz API", version="1.0.0")
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include routers
-app.include_router(chat.router)
-app.include_router(students.router)
-app.include_router(consultations.router)
-app.include_router(recommendations.router)
-app.include_router(documents.router)
-app.include_router(auth.router)
-app.include_router(questionnaires.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(students.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
+app.include_router(recommendations.router, prefix="/api")
+app.include_router(consultations.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
+app.include_router(questionnaires.router, prefix="/api")
+app.include_router(processing.router, prefix="/api")
 
-@app.get("/health")
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Edenz API"}
+
+@app.get("/api/health")
 async def health_check():
-    """
-    Simple health check endpoint
-    """
-    return {"status": "healthy", "service": "Edenz AI API"}
+    return {"status": "healthy"}
 
-# Start the server with: uvicorn main:app --reload
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+@app.get("/api/version")
+async def version():
+    return {"version": app.version}

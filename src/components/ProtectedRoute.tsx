@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { isAuthenticated, isStudentAuthenticated } from "@/lib/api";
+import { isAuthenticated, isStudentAuthenticated, isProcessingAuthenticated } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -9,9 +9,15 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requiresAdmin?: boolean;
   requiresStudent?: boolean;
+  requiresProcessing?: boolean;
 }
 
-const ProtectedRoute = ({ children, requiresAdmin = false, requiresStudent = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ 
+  children, 
+  requiresAdmin = false, 
+  requiresStudent = false,
+  requiresProcessing = false 
+}: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [auth, setAuth] = useState(false);
   const navigate = useNavigate();
@@ -41,6 +47,16 @@ const ProtectedRoute = ({ children, requiresAdmin = false, requiresStudent = fal
             });
             navigate("/student/login");
           }
+        } else if (requiresProcessing) {
+          isAuth = await isProcessingAuthenticated();
+          if (!isAuth) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to access the processing team portal",
+              variant: "destructive",
+            });
+            navigate("/processing/login");
+          }
         }
         
         setAuth(isAuth);
@@ -58,7 +74,7 @@ const ProtectedRoute = ({ children, requiresAdmin = false, requiresStudent = fal
     };
 
     checkAuth();
-  }, [navigate, requiresAdmin, requiresStudent]);
+  }, [navigate, requiresAdmin, requiresStudent, requiresProcessing]);
 
   if (loading) {
     return (
@@ -70,7 +86,14 @@ const ProtectedRoute = ({ children, requiresAdmin = false, requiresStudent = fal
   }
 
   if (!auth) {
-    return <Navigate to={requiresAdmin ? "/admin/login" : "/student/login"} />;
+    if (requiresAdmin) {
+      return <Navigate to="/admin/login" />;
+    } else if (requiresStudent) {
+      return <Navigate to="/student/login" />;
+    } else if (requiresProcessing) {
+      return <Navigate to="/processing/login" />;
+    }
+    return <Navigate to="/" />;
   }
 
   return <>{children}</>;

@@ -1,925 +1,529 @@
-/**
- * API utility functions for form submissions and chat
- */
 
-import { createClient } from '@supabase/supabase-js';
-import { format } from 'date-fns';
-
-// Type definitions
-export interface ContactFormData {
-  name: string;
-  email: string;
-  phone: string;
-  message: string;
-}
-
-export interface ConsultationBookingData {
-  name: string;
-  email: string;
-  phone: string;
-  preferredDate: Date;
-  preferredTime: string;
-  service: string;
-  destination?: string;
-  message?: string;
-}
-
-export interface ChatMessage {
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp?: string;
-}
-
-export interface AdminCredentials {
-  email: string;
-  password: string;
-}
-
-export interface AdminUser {
-  id: string;
-  email: string;
-  role: string;
-  created_at: string;
-}
-
-export interface Consultation {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  date: string;
-  time: string;
-  service?: string;
-  message?: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  created_at: string;
-  session_id?: string;
-}
-
-export interface ChatResponse {
-  response: string;
-  session_id: string;
-  success: boolean;
-  action?: string;
-  booking_data?: {
-    name: string;
-    email: string;
-    phone: string;
-    date: string;
-    time: string;
-    message?: string;
-    service?: string;
-  };
-}
-
-export interface NotificationResult {
-  email_sent: boolean;
-  whatsapp_sent: boolean;
-}
-
-export interface ConsultationResponse {
-  id: string;
-  status: string;
-  notifications: NotificationResult;
-}
-
-export interface StudentCredentials {
-  email: string;
-  password: string;
-}
-
-export interface StudentRegistration {
-  name: string;
-  email: string;
-  password: string;
-  phone: string;
-}
-
-export interface StudentProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address?: string;
-  dob?: string;
-  bio?: string;
-  profile_picture?: string;
-  education?: {
-    degree: string;
-    institution: string;
-    yearCompleted: string;
-    gpa: string;
-  }[];
-  skills?: string[];
-}
-
-export interface DocumentUpload {
-  name: string;
-  type: string;
-  file_url: string;
-  user_id: string;
-  status?: string;
-  feedback?: string;
-  category_id?: string;
-  custom_name?: string;
-}
-
-export interface DocumentCategory {
-  id: string;
-  name: string;
-  description: string;
-  user_id?: string;
-  created_at: string;
-}
-
-export interface Document {
-  id: string;
-  name: string;
-  type: string;
-  file_url: string;
-  user_id: string;
-  status: string;
-  feedback?: string;
-  category_id?: string;
-  custom_name?: string;
-  created_at: string;
-}
-
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vxievjimtordkobtuink.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// API base URL
-const getApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-/**
- * Submits contact form data
- */
-export const submitContactForm = async (data: ContactFormData): Promise<void> => {
-  // Log the submission data
-  console.log('Contact form submission:', data);
-  
-  // In a real application, this would be an API call to your backend
-  return new Promise((resolve, reject) => {
-    // Simulate API request delay
-    setTimeout(() => {
-      try {
-        // Simulate server response
-        // For production, replace with actual API call
-        if (Math.random() > 0.1) { // 90% success rate
-          resolve();
-        } else {
-          reject(new Error('Failed to submit form'));
-        }
-      } catch (error) {
-        reject(error);
-      }
-    }, 1500);
-  });
-};
-
-/**
- * Submits consultation booking data and sends confirmation notifications
- */
-export const submitConsultationBooking = async (data: ConsultationBookingData): Promise<NotificationResult> => {
+// Authentication functions
+export const adminLogin = async ({ email, password }: { email: string; password: string }) => {
   try {
-    // Format date for database storage
-    const formattedDate = data.preferredDate ? format(data.preferredDate, 'yyyy-MM-dd') : '';
-    
-    // Use the API endpoint if available, otherwise fallback to direct Supabase
-    const apiUrl = getApiUrl();
-    let notificationResults: NotificationResult = { email_sent: false, whatsapp_sent: false };
-    
-    try {
-      // Try to use the FastAPI endpoint first
-      console.log(`Submitting consultation to ${apiUrl}/consultation`);
-      
-      const response = await fetch(`${apiUrl}/consultation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          date: formattedDate,
-          time: data.preferredTime,
-          service: data.service,
-          message: data.message || '',
-          status: 'pending',
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const result: ConsultationResponse = await response.json();
-      notificationResults = result.notifications;
-      console.log('Consultation booked successfully via API with notifications:', notificationResults);
-      
-    } catch (apiError) {
-      console.warn('API endpoint unavailable, falling back to direct Supabase:', apiError);
-      
-      // Fallback to direct Supabase insert
-      const consultationData = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        date: formattedDate,
-        time: data.preferredTime,
-        service: data.service,
-        message: data.message || '',
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      };
-      
-      // Insert into Supabase database
-      const { error } = await supabase
-        .from('consultations')
-        .insert([consultationData]);
-        
-      if (error) {
-        console.error('Error saving consultation to database:', error);
-        throw new Error('Failed to save consultation');
-      }
-      
-      console.log('Consultation booked successfully via Supabase (no notifications sent)');
-    }
-    
-    return notificationResults;
-  } catch (error) {
-    console.error('Error booking consultation:', error);
-    throw error;
-  }
-};
-
-// Store chat session ID in localStorage
-const CHAT_SESSION_KEY = 'edenz_chat_session_id';
-
-/**
- * Get or create a chat session ID
- */
-const getChatSessionId = (): string => {
-  let sessionId = localStorage.getItem(CHAT_SESSION_KEY);
-  if (!sessionId) {
-    // Generate a random session ID if none exists
-    sessionId = Math.random().toString(36).substring(2, 15);
-    localStorage.setItem(CHAT_SESSION_KEY, sessionId);
-  }
-  return sessionId;
-};
-
-// Fallback responses when API is unavailable
-const fallbackResponses = [
-  "I'm here to help you with your study abroad journey. What specific country or program are you interested in?",
-  "Edenz Consultants can help you with university selection, visa guidance, and the entire application process. Would you like to know more about any specific aspect?",
-  "We specialize in helping students study in the UK, USA, Canada, Australia, and New Zealand. Which country interests you the most?",
-  "Our expert counselors can provide personalized guidance for your specific situation. Would you like to book a consultation?",
-  "Many of our students have successfully secured scholarships. Your academic background and the destination country are key factors in scholarship eligibility.",
-  "I'm having trouble connecting to my full knowledge base, but I'd be happy to arrange a call with one of our education experts who can answer all your questions in detail."
-];
-
-/**
- * Get a random fallback response
- */
-const getFallbackResponse = (message: string): string => {
-  // Simple intent detection for better fallbacks
-  const messageText = message.toLowerCase();
-  
-  if (messageText.includes('hello') || messageText.includes('hi') || messageText.includes('hey')) {
-    return "Hello! I'm Edenz AI. How can I help with your study abroad plans today?";
-  }
-  
-  if (messageText.includes('scholarship') || messageText.includes('fund') || messageText.includes('financial')) {
-    return "Scholarships vary by country and institution. Many universities offer merit-based scholarships for international students with strong academic records. Would you like to know about specific scholarship opportunities?";
-  }
-  
-  if (messageText.includes('visa') || messageText.includes('permit')) {
-    return "Visa requirements differ by country. We provide comprehensive visa application support, including document preparation and interview coaching. Which country's visa process would you like to know more about?";
-  }
-  
-  if (messageText.includes('cost') || messageText.includes('fee') || messageText.includes('expensive')) {
-    return "Tuition and living costs vary significantly by country and city. Generally, studying in the US tends to be more expensive than the UK, Canada, or Australia. Would you like a cost breakdown for a specific destination?";
-  }
-  
-  if (messageText.includes('test') || messageText.includes('ielts') || messageText.includes('toefl') || messageText.includes('gre') || messageText.includes('gmat')) {
-    return "Most English-speaking universities require English proficiency tests like IELTS or TOEFL. Graduate programs might also require GRE or GMAT. We can help you prepare for these tests and understand the specific requirements for your chosen programs.";
-  }
-  
-  // Default to a random response if no specific intent is detected
-  return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-};
-
-/**
- * Send a message to the chat API
- */
-export const sendChatMessage = async (message: string): Promise<ChatResponse> => {
-  try {
-    const sessionId = getChatSessionId();
-    
-    // Get the API URL from environment or default to localhost in development
-    const apiUrl = getApiUrl();
-    
-    console.log(`Sending message to ${apiUrl}/chat`);
-    
-    // Send the message to the FastAPI backend
-    const response = await fetch(`${apiUrl}/chat`, {
-      method: 'POST',
+    const response = await fetch("http://localhost:8000/api/auth/token", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({ 
-        message,
-        session_id: sessionId
+      body: new URLSearchParams({
+        username: email,
+        password: password,
       }),
     });
-    
+
     if (!response.ok) {
-      console.error('API response not OK:', response.status, response.statusText);
-      throw new Error(`Failed to send message: ${response.statusText}`);
+      throw new Error("Login failed");
     }
-    
+
     const data = await response.json();
     
-    // Update session ID if a new one is provided
-    if (data.session_id) {
-      localStorage.setItem(CHAT_SESSION_KEY, data.session_id);
+    // Check if user is an admin
+    if (data.user.role !== "admin") {
+      throw new Error("Not authorized as admin");
     }
+    
+    // Store token and user info in localStorage
+    localStorage.setItem("adminToken", data.access_token);
+    localStorage.setItem("adminUser", JSON.stringify(data.user));
     
     return data;
   } catch (error) {
-    console.error('Error sending chat message:', error);
-    
-    // Return a fallback response when API is unavailable
-    return {
-      response: getFallbackResponse(message),
-      session_id: getChatSessionId(),
-      success: false
-    };
-  }
-};
-
-/**
- * Get chat history for the current session - now just returns an empty array
- */
-export const getChatHistory = async (): Promise<ChatMessage[]> => {
-  // No longer fetching history from the database
-  return [];
-};
-
-/**
- * Admin login using Supabase Auth
- */
-export const adminLogin = async (credentials: AdminCredentials): Promise<void> => {
-  try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
-    });
-    
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error during login:', error);
+    console.error("Admin login error:", error);
     throw error;
   }
 };
 
-/**
- * Check if user is logged in
- */
-export const isAuthenticated = async (): Promise<boolean> => {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return !!data.session;
-  } catch (error) {
-    console.error('Authentication check error:', error);
+export const isAuthenticated = async () => {
+  const token = localStorage.getItem("adminToken");
+  
+  if (!token) {
     return false;
   }
-};
-
-/**
- * Logout admin
- */
-export const logout = async (): Promise<void> => {
+  
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-    throw error;
-  }
-};
-
-/**
- * Get all consultations (admin only)
- */
-export const getConsultations = async (): Promise<Consultation[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('consultations')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      throw error;
-    }
-    
-    return data as Consultation[];
-  } catch (error) {
-    console.error('Error getting consultations:', error);
-    throw error;
-  }
-};
-
-/**
- * Update consultation status (admin only)
- */
-export const updateConsultationStatus = async (consultationId: string, status: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('consultations')
-      .update({ status })
-      .eq('id', consultationId);
-      
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error updating consultation status:', error);
-    throw error;
-  }
-};
-
-/**
- * Get all admin users (admin only)
- */
-export const getAdminUsers = async (): Promise<AdminUser[]> => {
-  try {
-    const { data, error } = await supabase.auth.admin.listUsers();
-    
-    if (error) {
-      throw error;
-    }
-    
-    return data.users.map(user => ({
-      id: user.id,
-      email: user.email || '',
-      role: user.role || 'user',
-      created_at: user.created_at || new Date().toISOString()
-    }));
-  } catch (error) {
-    console.error('Error getting admin users:', error);
-    throw error;
-  }
-};
-
-/**
- * Create a new admin user (admin only)
- */
-export const createAdminUser = async (credentials: AdminCredentials): Promise<void> => {
-  try {
-    const { error } = await supabase.auth.admin.createUser({
-      email: credentials.email,
-      password: credentials.password,
-      email_confirm: true
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error creating admin user:', error);
-    throw error;
-  }
-};
-
-/**
- * Student registration
- */
-export const registerStudent = async (data: StudentRegistration): Promise<void> => {
-  try {
-    console.log('Registering student:', data);
-    
-    // First register in Supabase Auth
-    const { error: authError, data: authData } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-    });
-    
-    if (authError) {
-      throw new Error(authError.message);
-    }
-    
-    if (!authData || !authData.user) {
-      throw new Error('Registration failed');
-    }
-    
-    // Then add additional user data to the students table
-    const { error: dbError } = await supabase
-      .from('students')
-      .insert([{
-        id: authData.user.id,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        created_at: new Date().toISOString(),
-      }]);
-      
-    if (dbError) {
-      throw new Error(dbError.message);
-    }
-    
-    return;
-  } catch (error) {
-    console.error('Error registering student:', error);
-    throw error;
-  }
-};
-
-/**
- * Student login
- */
-export const loginStudent = async (credentials: StudentCredentials): Promise<{ token: string; user: any }> => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
-    });
-    
-    if (error) {
-      throw new Error(error.message);
-    }
-    
-    if (!data || !data.session || !data.user) {
-      throw new Error('Login failed');
-    }
-    
-    // Get user details from students table
-    const { data: userData, error: userError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-      
-    if (userError) {
-      console.warn('Error fetching user data:', userError);
-    }
-    
-    return {
-      token: data.session.access_token,
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: userData?.name || '',
-        phone: userData?.phone || '',
-      }
-    };
-  } catch (error) {
-    console.error('Error logging in student:', error);
-    throw error;
-  }
-};
-
-/**
- * Get current student profile
- */
-export const getStudentProfile = async (): Promise<StudentProfile> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    // Get user data from students table
-    const { data: userData, error: userError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-      
-    if (userError) {
-      throw new Error('Failed to fetch profile');
-    }
-    
-    // Get education data
-    const { data: educationData, error: educationError } = await supabase
-      .from('education')
-      .select('*')
-      .eq('student_id', session.user.id);
-      
-    if (educationError) {
-      console.warn('Error fetching education data:', educationError);
-    }
-    
-    return {
-      id: session.user.id,
-      name: userData?.name || '',
-      email: userData?.email || session.user.email || '',
-      phone: userData?.phone || '',
-      address: userData?.address || '',
-      dob: userData?.dob || '',
-      bio: userData?.bio || '',
-      profile_picture: userData?.profile_picture || '',
-      education: educationData || []
-    };
-  } catch (error) {
-    console.error('Error getting student profile:', error);
-    throw error;
-  }
-};
-
-/**
- * Update student profile
- */
-export const updateStudentProfile = async (profile: Partial<StudentProfile>): Promise<void> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    const { error } = await supabase
-      .from('students')
-      .update({
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
-        address: profile.address,
-        dob: profile.dob,
-        bio: profile.bio,
-        profile_picture: profile.profile_picture,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', session.user.id);
-      
-    if (error) {
-      throw new Error(`Failed to update profile: ${error.message}`);
-    }
-  } catch (error) {
-    console.error('Error updating student profile:', error);
-    throw error;
-  }
-};
-
-/**
- * Add education entry
- */
-export const addEducation = async (education: {
-  degree: string;
-  institution: string;
-  yearCompleted: string;
-  gpa: string;
-}): Promise<void> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    const { error } = await supabase
-      .from('education')
-      .insert([{
-        student_id: session.user.id,
-        degree: education.degree,
-        institution: education.institution,
-        year_completed: education.yearCompleted,
-        gpa: education.gpa,
-        created_at: new Date().toISOString()
-      }]);
-      
-    if (error) {
-      throw new Error(`Failed to add education: ${error.message}`);
-    }
-  } catch (error) {
-    console.error('Error adding education:', error);
-    throw error;
-  }
-};
-
-/**
- * Upload a document
- */
-export const uploadDocument = async (document: DocumentUpload): Promise<{ document_id: string }> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    // Ensure user can only upload documents for themselves
-    if (document.user_id !== session.user.id) {
-      throw new Error('Not authorized to upload for this user');
-    }
-    
-    const { data, error } = await supabase
-      .from('documents')
-      .insert({
-        name: document.name,
-        type: document.type,
-        file_url: document.file_url,
-        user_id: document.user_id,
-        status: document.status || 'pending',
-        feedback: document.feedback,
-        category_id: document.category_id,
-        custom_name: document.custom_name,
-        created_at: new Date().toISOString()
-      })
-      .select('id')
-      .single();
-      
-    if (error) {
-      throw new Error(`Failed to upload document: ${error.message}`);
-    }
-    
-    return { document_id: data.id };
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    throw error;
-  }
-};
-
-/**
- * Upload file to Supabase Storage
- */
-export const uploadFile = async (file: File, bucket: string = 'documents'): Promise<string> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    // Create a unique file name
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
-    
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file);
-      
-    if (error) {
-      throw new Error(`Failed to upload file: ${error.message}`);
-    }
-    
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(fileName);
-      
-    return urlData.publicUrl;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    throw error;
-  }
-};
-
-/**
- * Get student documents
- */
-export const getStudentDocuments = async (): Promise<Document[]> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('user_id', session.user.id);
-      
-    if (error) {
-      throw new Error('Failed to fetch documents');
-    }
-    
-    return data || [];
-  } catch (error) {
-    console.error('Error getting student documents:', error);
-    throw error;
-  }
-};
-
-/**
- * Get document categories
- */
-export const getDocumentCategories = async (): Promise<DocumentCategory[]> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    // Get system categories
-    const { data: systemCategories, error: systemError } = await supabase
-      .from('document_categories')
-      .select('*')
-      .is('user_id', null);
-      
-    if (systemError) {
-      throw new Error('Failed to fetch system categories');
-    }
-    
-    // Get user's custom categories
-    const { data: userCategories, error: userError } = await supabase
-      .from('document_categories')
-      .select('*')
-      .eq('user_id', session.user.id);
-      
-    if (userError) {
-      throw new Error('Failed to fetch user categories');
-    }
-    
-    return [...(systemCategories || []), ...(userCategories || [])];
-  } catch (error) {
-    console.error('Error getting document categories:', error);
-    throw error;
-  }
-};
-
-/**
- * Create a document category
- */
-export const createDocumentCategory = async (category: Partial<DocumentCategory>): Promise<{ category_id: string }> => {
-  try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      throw new Error('Authentication required');
-    }
-    
-    const { data, error } = await supabase
-      .from('document_categories')
-      .insert({
-        name: category.name,
-        description: category.description,
-        user_id: session.user.id,
-        created_at: new Date().toISOString()
-      })
-      .select('id')
-      .single();
-      
-    if (error) {
-      throw new Error(`Failed to create category: ${error.message}`);
-    }
-    
-    return { category_id: data.id };
-  } catch (error) {
-    console.error('Error creating document category:', error);
-    throw error;
-  }
-};
-
-/**
- * Check if a student is authenticated
- */
-export const isStudentAuthenticated = async (): Promise<boolean> => {
-  try {
-    const token = localStorage.getItem('studentToken');
-    if (!token) {
+    if (!response.ok) {
       return false;
     }
     
-    // Verify the token by making a request to the /auth/me endpoint
-    const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/auth/me`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    return response.ok;
+    const data = await response.json();
+    return data.role === "admin";
   } catch (error) {
-    console.error('Student auth check error:', error);
+    console.error("Auth check error:", error);
     return false;
   }
 };
 
-/**
- * Student logout
- */
-export const logoutStudent = async (): Promise<void> => {
+export const logoutAdmin = () => {
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("adminUser");
+};
+
+export const studentLogin = async ({ email, password }: { email: string; password: string }) => {
   try {
-    // Remove token from localStorage
-    localStorage.removeItem('studentToken');
-    localStorage.removeItem('studentUser');
+    const response = await fetch("http://localhost:8000/api/auth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        username: email,
+        password: password,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Login failed");
+    }
+
+    const data = await response.json();
     
-    // No need to call Supabase signOut since we're using JWT tokens
+    // Check if user is a student
+    if (data.user.role !== "student") {
+      throw new Error("Not authorized as student");
+    }
+    
+    // Store token and user info in localStorage
+    localStorage.setItem("studentToken", data.access_token);
+    localStorage.setItem("studentUser", JSON.stringify(data.user));
+    
+    return data;
   } catch (error) {
-    console.error('Error during logout:', error);
+    console.error("Student login error:", error);
+    throw error;
+  }
+};
+
+export const isStudentAuthenticated = async () => {
+  const token = localStorage.getItem("studentToken");
+  
+  if (!token) {
+    return false;
+  }
+  
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      return false;
+    }
+    
+    const data = await response.json();
+    return data.role === "student";
+  } catch (error) {
+    console.error("Auth check error:", error);
+    return false;
+  }
+};
+
+export const logoutStudent = () => {
+  localStorage.removeItem("studentToken");
+  localStorage.removeItem("studentUser");
+};
+
+export const processingLogin = async ({ email, password }: { email: string; password: string }) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        username: email,
+        password: password,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Login failed");
+    }
+
+    const data = await response.json();
+    
+    // Check if user is a processing team member
+    if (data.user.role !== "processing") {
+      throw new Error("Not authorized as processing team member");
+    }
+    
+    // Store token and user info in localStorage
+    localStorage.setItem("processingToken", data.access_token);
+    localStorage.setItem("processingUser", JSON.stringify(data.user));
+    
+    return data;
+  } catch (error) {
+    console.error("Processing login error:", error);
+    throw error;
+  }
+};
+
+export const isProcessingAuthenticated = async () => {
+  const token = localStorage.getItem("processingToken");
+  
+  if (!token) {
+    return false;
+  }
+  
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      return false;
+    }
+    
+    const data = await response.json();
+    return data.role === "processing";
+  } catch (error) {
+    console.error("Auth check error:", error);
+    return false;
+  }
+};
+
+export const logoutProcessing = () => {
+  localStorage.removeItem("processingToken");
+  localStorage.removeItem("processingUser");
+};
+
+export const registerStudent = async (studentData: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+}) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/register/student", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(studentData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Registration failed");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Student registration error:", error);
+    throw error;
+  }
+};
+
+export const registerProcessingMember = async (
+  processingData: {
+    name: string;
+    email: string;
+    password: string;
+    phone: string;
+    managed_regions?: string[];
+  },
+  adminToken: string
+) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/register/processing", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...processingData,
+        admin_token: adminToken
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Registration failed");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Processing member registration error:", error);
+    throw error;
+  }
+};
+
+// Student API functions
+export const getStudentProfile = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/student/profile/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch student profile");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get student profile error:", error);
+    throw error;
+  }
+};
+
+export const updateStudentProfile = async (studentId: string, profileData: any) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/student/profile/${studentId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update student profile");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Update student profile error:", error);
+    throw error;
+  }
+};
+
+// Document API functions
+export const getStudentDocuments = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/documents/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch student documents");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get student documents error:", error);
+    throw error;
+  }
+};
+
+export const uploadStudentDocument = async (documentData: any) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/documents`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(documentData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload document");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Upload document error:", error);
+    throw error;
+  }
+};
+
+// Applications API functions
+export const getStudentApplications = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/student/applications/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch student applications");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get student applications error:", error);
+    throw error;
+  }
+};
+
+// Processing Team API functions
+export const getAllStudents = async () => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/students`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch students");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get all students error:", error);
+    throw error;
+  }
+};
+
+export const getStudentDetails = async (studentId: string) => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/students/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch student details");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get student details error:", error);
+    throw error;
+  }
+};
+
+export const createStudentApplication = async (applicationData: any) => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/applications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(applicationData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create application");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Create application error:", error);
+    throw error;
+  }
+};
+
+export const updateStudentApplication = async (applicationId: string, updateData: any) => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/applications/${applicationId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updateData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update application");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Update application error:", error);
+    throw error;
+  }
+};
+
+export const getApplicationHistory = async (applicationId: string) => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken") || localStorage.getItem("studentToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/applications/${applicationId}/history`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch application history");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get application history error:", error);
+    throw error;
+  }
+};
+
+export const generateStudentRecommendation = async (studentId: string) => {
+  const token = localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/processing/generate-recommendation/${studentId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate recommendation");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Generate recommendation error:", error);
+    throw error;
+  }
+};
+
+export const getStudentRecommendations = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/recommendations/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch recommendations");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get recommendations error:", error);
     throw error;
   }
 };

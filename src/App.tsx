@@ -25,6 +25,15 @@ import StudentProfile from "./pages/student/StudentProfile";
 import StudentApplications from "./pages/student/StudentApplications";
 import StudentRecommendations from "./pages/student/StudentRecommendations";
 
+// Processing Team Portal Routes
+import ProcessingLogin from "./pages/processing/ProcessingLogin";
+import ProcessingDashboard from "./pages/processing/ProcessingDashboard";
+import ProcessingStudents from "./pages/processing/ProcessingStudents";
+import ProcessingStudent from "./pages/processing/ProcessingStudent";
+import ProcessingApplications from "./pages/processing/ProcessingApplications";
+import ProcessingRecommendations from "./pages/processing/ProcessingRecommendations";
+import ProcessingRegister from "./pages/admin/ProcessingRegister";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -49,6 +58,14 @@ const App = () => (
             element={
               <ProtectedRoute requiresAdmin>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/register-processing" 
+            element={
+              <ProtectedRoute requiresAdmin>
+                <ProcessingRegister />
               </ProtectedRoute>
             } 
           />
@@ -93,6 +110,49 @@ const App = () => (
             element={
               <ProtectedRoute requiresStudent>
                 <StudentRecommendations />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Processing Team Portal Routes */}
+          <Route path="/processing/login" element={<ProcessingLogin />} />
+          <Route 
+            path="/processing/dashboard" 
+            element={
+              <ProtectedRoute requiresProcessing>
+                <ProcessingDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/processing/students" 
+            element={
+              <ProtectedRoute requiresProcessing>
+                <ProcessingStudents />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/processing/student/:id" 
+            element={
+              <ProtectedRoute requiresProcessing>
+                <ProcessingStudent />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/processing/applications" 
+            element={
+              <ProtectedRoute requiresProcessing>
+                <ProcessingApplications />
+              </ProtectedRoute>
+            }
+          />
+          <Route 
+            path="/processing/recommendations/:studentId" 
+            element={
+              <ProtectedRoute requiresProcessing>
+                <ProcessingRecommendations />
               </ProtectedRoute>
             }
           />

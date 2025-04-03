@@ -32,6 +32,14 @@ class StudentRegister(BaseModel):
     email: str
     password: str
     phone: str
+    
+class ProcessingMemberRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str
+    admin_token: str  # Token to verify this is created by an admin
+    managed_regions: Optional[List[str]] = None
 
 # Helper function to create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -90,10 +98,59 @@ async def register_student(user: StudentRegister):
             "name": user.name,
             "email": user.email,
             "phone": user.phone,
+            "role": "student",
             "created_at": datetime.now().isoformat()
         }).execute()
         
         return {"success": True, "message": "Student registered successfully"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/register/processing", status_code=status.HTTP_201_CREATED)
+async def register_processing_member(user: ProcessingMemberRegister):
+    """Register a new processing team member (admin only)"""
+    try:
+        # Verify admin token
+        admin_user = None
+        try:
+            admin_token = user.admin_token
+            admin_user_response = supabase_client.auth.get_user(admin_token)
+            admin_user = admin_user_response.user if admin_user_response else None
+        except Exception as e:
+            raise HTTPException(status_code=403, detail="Invalid admin token")
+        
+        if not admin_user:
+            raise HTTPException(status_code=403, detail="Invalid admin token")
+        
+        # Check if admin user exists in admins table
+        admin_check = supabase_client.table("admins").select("*").eq("id", admin_user.id).execute()
+        if not admin_check or not hasattr(admin_check, "data") or len(admin_check.data) == 0:
+            raise HTTPException(status_code=403, detail="Not authorized to create processing team members")
+        
+        # Register with Supabase Auth
+        response = supabase_client.auth.sign_up({
+            "email": user.email,
+            "password": user.password,
+        })
+        
+        if not response or not hasattr(response, "user") or not response.user:
+            raise HTTPException(status_code=400, detail="Registration failed")
+        
+        # Add additional user data to processing_team table
+        result = supabase_client.table("processing_team").insert({
+            "id": response.user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": "processing",
+            "managed_regions": user.managed_regions or [],
+            "created_by": admin_user.id,
+            "created_at": datetime.now().isoformat()
+        }).execute()
+        
+        return {"success": True, "message": "Processing team member registered successfully"}
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -115,14 +172,23 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 detail="Incorrect email or password",
             )
         
-        # Get user details from students table
+        # Get user details from appropriate table based on role
         user_id = response.user.id
-        user_data_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
         
+        # Try to find user in students table
+        user_data_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
+        role = "student"
+        
+        # If not found in students, check processing_team
         if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
-            # If not found in students, check admins
-            user_data_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
+            user_data_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
+            role = "processing"
             
+        # If not found in processing_team, check admins
+        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
+            user_data_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
+            role = "admin"
+        
         if user_data_response and hasattr(user_data_response, "data") and len(user_data_response.data) > 0:
             user_data = user_data_response.data[0]
         else:
@@ -136,7 +202,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 "id": user_id,
                 "email": user_data.get("email", response.user.email),
                 "name": user_data.get("name", ""),
-                "role": user_data.get("role", "student")
+                "role": user_data.get("role", role),
+                "managed_regions": user_data.get("managed_regions", []) if role == "processing" else None
             }
         }
     except Exception as e:
@@ -151,13 +218,22 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: dict = Depends(get_supabase_user)):
     """Get current user profile"""
     try:
-        # Get user data from students table
+        # Get user data from appropriate table
         user_id = current_user.id
-        user_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
         
+        # Check students table first
+        user_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
+        role = "student"
+        
+        # If not found, check processing_team table
         if not user_response or not hasattr(user_response, "data") or len(user_response.data) == 0:
-            # If not found in students, check admins
+            user_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
+            role = "processing"
+        
+        # If not found, check admins table
+        if not user_response or not hasattr(user_response, "data") or len(user_response.data) == 0:
             user_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
+            role = "admin"
         
         if user_response and hasattr(user_response, "data") and len(user_response.data) > 0:
             user_data = user_response.data[0]
@@ -165,7 +241,8 @@ async def read_users_me(current_user: dict = Depends(get_supabase_user)):
                 "id": user_id,
                 "email": user_data.get("email", current_user.email),
                 "name": user_data.get("name", ""),
-                "role": user_data.get("role", "student")
+                "role": user_data.get("role", role),
+                "managed_regions": user_data.get("managed_regions", []) if role == "processing" else None
             }
         
         return {
