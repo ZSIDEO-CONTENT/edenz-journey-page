@@ -2,7 +2,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -67,7 +73,25 @@ const Navbar = () => {
             <Link to="/contact" className="nav-link">Contact</Link>
           </nav>
 
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center space-x-4">
+            {/* Student Portal Button with Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>Student Portal</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white shadow-md">
+                <DropdownMenuItem asChild>
+                  <Link to="/student/login" className="cursor-pointer">Login</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/student/register" className="cursor-pointer">Register</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Link to="/book-consultation">
               <Button className="btn-primary">Book Consultation</Button>
             </Link>
@@ -93,6 +117,14 @@ const Navbar = () => {
           <Link to="/about" className="block py-2 px-4 hover:bg-edenz-light rounded-md">About Us</Link>
           <Link to="/" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Success Stories</Link>
           <Link to="/contact" className="block py-2 px-4 hover:bg-edenz-light rounded-md">Contact</Link>
+          
+          {/* Student Portal Links for Mobile */}
+          <div className="border-t border-gray-100 pt-2">
+            <h3 className="px-4 py-2 text-sm font-medium text-gray-600">Student Portal</h3>
+            <Link to="/student/login" className="block py-2 px-6 hover:bg-edenz-light rounded-md text-primary">Login</Link>
+            <Link to="/student/register" className="block py-2 px-6 hover:bg-edenz-light rounded-md text-primary">Register</Link>
+          </div>
+          
           <div className="pt-2 pb-4">
             <Link to="/book-consultation">
               <Button className="btn-primary w-full">Book Consultation</Button>
