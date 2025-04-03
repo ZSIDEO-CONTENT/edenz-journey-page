@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -16,7 +16,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
+import { studentLogin, isStudentAuthenticated } from '@/lib/api';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -27,6 +28,22 @@ const StudentLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if already authenticated
+    const checkAuth = async () => {
+      try {
+        const isAuth = await isStudentAuthenticated();
+        if (isAuth) {
+          navigate('/student/dashboard');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,43 +57,23 @@ const StudentLogin = () => {
     setIsLoading(true);
     
     try {
-      // Send login request to the proper API endpoint
-      const response = await fetch('http://localhost:8000/auth/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: values.email, // OAuth2 expects 'username' even for email
-          password: values.password,
-          grant_type: 'password'
-        }),
+      await studentLogin({
+        email: values.email,
+        password: values.password,
       });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
-      }
-      
-      const data = await response.json();
-      
-      // Store the token and user info in localStorage
-      localStorage.setItem('studentToken', data.access_token);
-      localStorage.setItem('studentUser', JSON.stringify(data.user));
       
       toast({
         title: 'Login successful',
         description: 'Welcome back to your student portal',
       });
       
-      // Redirect to dashboard
       navigate('/student/dashboard');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      console.error('Login error:', error);
       
       toast({
         title: 'Login failed',
-        description: errorMessage,
+        description: error instanceof Error ? error.message : 'Invalid email or password',
         variant: 'destructive',
       });
     } finally {
