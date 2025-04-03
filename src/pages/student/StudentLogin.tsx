@@ -41,7 +41,7 @@ const StudentLogin = () => {
     
     try {
       // Send login request to the proper API endpoint
-      const response = await fetch('/api/auth/token', {
+      const response = await fetch('http://localhost:8000/auth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

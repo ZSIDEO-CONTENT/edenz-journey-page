@@ -50,7 +50,7 @@ const StudentRegister = () => {
     
     try {
       // Send registration request to the actual API endpoint
-      const response = await fetch('/api/auth/register/student', {
+      const response = await fetch('http://localhost:8000/auth/register/student', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
