@@ -60,8 +60,8 @@ const StudentDashboard = () => {
             
             if (onboardingResponse.ok) {
               const onboardingData = await onboardingResponse.json();
-              setOnboardingSteps(onboardingData.steps);
-              setOnboardingProgress(onboardingData.progress);
+              setOnboardingSteps(onboardingData.steps || []);
+              setOnboardingProgress(onboardingData.progress || 0);
             }
             
             // Fetch applications
@@ -73,7 +73,7 @@ const StudentDashboard = () => {
             
             if (applicationsResponse.ok) {
               const applicationsData = await applicationsResponse.json();
-              setApplications(applicationsData);
+              setApplications(applicationsData || []);
             }
           }
         } catch (apiError) {
@@ -120,7 +120,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* Onboarding Progress */}
-            {onboardingSteps.length > 0 && (
+            {onboardingSteps && onboardingSteps.length > 0 && (
               <Card className="mb-8 bg-primary/5 hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -190,7 +190,7 @@ const StudentDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{applications.length}</div>
+                  <div className="text-3xl font-bold">{applications ? applications.length : 0}</div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Active applications
                   </div>
@@ -236,7 +236,7 @@ const StudentDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {applications.length > 0 ? (
+                  {applications && applications.length > 0 ? (
                     applications.map((app) => (
                       <div key={app.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
@@ -266,7 +266,7 @@ const StudentDashboard = () => {
                   )}
                 </div>
               </CardContent>
-              {applications.length > 0 && (
+              {applications && applications.length > 0 && (
                 <CardFooter>
                   <Link to="/student/applications">
                     <Button variant="outline" size="sm">View all applications</Button>

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { studentLogin, isStudentAuthenticated } from '@/lib/api';
+import { isStudentAuthenticated } from '@/lib/api';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -79,7 +79,23 @@ const StudentLogin = () => {
       
       // Store the token and user info in localStorage
       localStorage.setItem('studentToken', data.access_token);
-      localStorage.setItem('studentUser', JSON.stringify(data.user));
+      
+      // Make sure we have proper user data
+      if (data.user) {
+        localStorage.setItem('studentUser', JSON.stringify(data.user));
+      } else {
+        // If user data is not included in the token response, fetch it
+        const userResponse = await fetch('http://localhost:8000/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${data.access_token}`
+          }
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          localStorage.setItem('studentUser', JSON.stringify(userData));
+        }
+      }
       
       toast({
         title: 'Login successful',
