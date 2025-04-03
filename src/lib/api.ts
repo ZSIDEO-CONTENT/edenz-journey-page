@@ -1,4 +1,3 @@
-
 // Authentication functions
 export const adminLogin = async ({ email, password }: { email: string; password: string }) => {
   try {
@@ -59,6 +58,11 @@ export const isAuthenticated = async () => {
     console.error("Auth check error:", error);
     return false;
   }
+};
+
+export const logout = () => {
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("adminUser");
 };
 
 export const logoutAdmin = () => {
@@ -524,6 +528,155 @@ export const getStudentRecommendations = async (studentId: string) => {
     return await response.json();
   } catch (error) {
     console.error("Get recommendations error:", error);
+    throw error;
+  }
+};
+
+// Interface definitions
+export interface Consultation {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  date: string;
+  time?: string;
+  message?: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  created_at: string;
+}
+
+export interface ConsultationBookingData {
+  name: string;
+  email: string;
+  phone: string;
+  preferredDate: Date;
+  preferredTime: string;
+  service: string;
+  destination?: string;
+  message?: string;
+}
+
+export interface ChatMessage {
+  content: string;
+  sender: 'user' | 'bot';
+}
+
+// Consultation API functions
+export const getConsultations = async (): Promise<Consultation[]> => {
+  const token = localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch("http://localhost:8000/api/consultations", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch consultations");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get consultations error:", error);
+    throw error;
+  }
+};
+
+export const updateConsultationStatus = async (consultationId: string, status: string): Promise<void> => {
+  const token = localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/consultations/${consultationId}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update consultation status");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Update consultation status error:", error);
+    throw error;
+  }
+};
+
+export const submitConsultationBooking = async (bookingData: ConsultationBookingData) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/consultations/book", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...bookingData,
+        preferredDate: bookingData.preferredDate.toISOString().split('T')[0], // Format date as YYYY-MM-DD
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to book consultation");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Consultation booking error:", error);
+    throw error;
+  }
+};
+
+// Chat API functions
+export const sendChatMessage = async (message: string) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/chat/message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to send message");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Send chat message error:", error);
+    throw error;
+  }
+};
+
+// Contact API functions
+export const submitContactForm = async (formData: { 
+  name: string; 
+  email: string; 
+  phone?: string; 
+  message: string 
+}) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit contact form");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Submit contact form error:", error);
     throw error;
   }
 };

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -61,7 +60,13 @@ const ProcessingRegister = () => {
         return;
       }
       
-      await registerProcessingMember(values, adminToken);
+      await registerProcessingMember({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        phone: values.phone,
+        managed_regions: values.managed_regions
+      }, adminToken);
       
       toast({
         title: "Success!",
