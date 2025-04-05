@@ -22,28 +22,6 @@ interface OnboardingStep {
   link: string;
 }
 
-// Define a getStudentOnboardingSteps function in the api.ts file
-const getStudentOnboardingSteps = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/onboarding-steps/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch onboarding steps");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get onboarding steps error:", error);
-    throw error;
-  }
-};
-
 const StudentDashboard = () => {
   const [userData, setUserData] = useState<any>(null);
   const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>([]);
