@@ -1,4 +1,3 @@
-
 // Authentication functions
 export const adminLogin = async ({ email, password }: { email: string; password: string }) => {
   try {
@@ -374,6 +373,28 @@ export const getStudentApplications = async (studentId: string) => {
     return await response.json();
   } catch (error) {
     console.error("Get student applications error:", error);
+    throw error;
+  }
+};
+
+// Add the student onboarding steps function
+export const getStudentOnboardingSteps = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken") || localStorage.getItem("processingToken") || localStorage.getItem("adminToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/student/onboarding-steps/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch onboarding steps");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get onboarding steps error:", error);
     throw error;
   }
 };

@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FileText, BookOpen, Clock, CheckCircle2, AlertCircle,
-  FileUp, ArrowRight, BarChart3, Sparkles
+  FileUp, ArrowRight, BarChart3, Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import StudentLayout from '@/components/student/StudentLayout';
 import { useToast } from '@/hooks/use-toast';
+import { getStudentDocuments, getStudentProfile, getStudentApplications, getStudentOnboardingSteps } from '@/lib/api';
 
 interface OnboardingStep {
   id: string;
@@ -20,6 +21,28 @@ interface OnboardingStep {
   missing?: any[];
   link: string;
 }
+
+// Define a getStudentOnboardingSteps function in the api.ts file
+const getStudentOnboardingSteps = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/student/onboarding-steps/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch onboarding steps");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get onboarding steps error:", error);
+    throw error;
+  }
+};
 
 const StudentDashboard = () => {
   const [userData, setUserData] = useState<any>(null);
@@ -47,50 +70,30 @@ const StudentDashboard = () => {
         const user = JSON.parse(userString);
         setUserData(user);
         
-        // Try to fetch onboarding steps and applications
+        // Fetch all data concurrently
         try {
-          const token = localStorage.getItem('studentToken');
+          const [onboardingData, applicationsData, documentsData] = await Promise.all([
+            getStudentOnboardingSteps(user.id).catch(err => {
+              console.warn("Could not fetch onboarding steps:", err);
+              return { steps: [], progress: 0 };
+            }),
+            getStudentApplications(user.id).catch(err => {
+              console.warn("Could not fetch applications:", err);
+              return [];
+            }),
+            getStudentDocuments(user.id).catch(err => {
+              console.warn("Could not fetch documents:", err);
+              return [];
+            })
+          ]);
           
-          if (token && user.id) {
-            // Fetch onboarding steps
-            const onboardingResponse = await fetch(`http://localhost:8000/api/student/onboarding-steps/${user.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            if (onboardingResponse.ok) {
-              const onboardingData = await onboardingResponse.json();
-              setOnboardingSteps(onboardingData.steps || []);
-              setOnboardingProgress(onboardingData.progress || 0);
-            }
-            
-            // Fetch applications
-            const applicationsResponse = await fetch(`http://localhost:8000/api/student/applications/${user.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            if (applicationsResponse.ok) {
-              const applicationsData = await applicationsResponse.json();
-              setApplications(applicationsData || []);
-            }
-            
-            // Fetch documents
-            const documentsResponse = await fetch(`http://localhost:8000/api/documents/${user.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            if (documentsResponse.ok) {
-              const documentsData = await documentsResponse.json();
-              setDocuments(documentsData || []);
-            }
-          }
+          // Set data for the dashboard
+          setOnboardingSteps(onboardingData.steps || []);
+          setOnboardingProgress(onboardingData.progress || 0);
+          setApplications(applicationsData || []);
+          setDocuments(documentsData || []);
         } catch (apiError) {
-          console.warn('Could not fetch additional dashboard data:', apiError);
+          console.warn('Could not fetch all dashboard data:', apiError);
           // Continue with basic user data
         }
       } catch (error) {
@@ -110,14 +113,12 @@ const StudentDashboard = () => {
   }, [toast, navigate]);
 
   // Calculate document completion
-  const totalRequiredDocs = 5; // This should ideally come from the API
-  const uploadedDocuments = documents ? documents.length : 0;
-  const documentProgress = (uploadedDocuments / totalRequiredDocs) * 100;
-  
-  // Get required but missing documents
   const requiredDocTypes = ["passport", "academic_transcript", "cv_resume", "ielts", "personal_statement"];
   const uploadedDocTypes = documents ? documents.map(doc => doc.type) : [];
   const missingDocTypes = requiredDocTypes.filter(type => !uploadedDocTypes.includes(type));
+  const totalRequiredDocs = requiredDocTypes.length;
+  const uploadedDocuments = uploadedDocTypes.length;
+  const documentProgress = (uploadedDocuments / totalRequiredDocs) * 100;
 
   return (
     <StudentLayout title="Dashboard">
@@ -273,7 +274,7 @@ const StudentDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   {applications && applications.length > 0 ? (
-                    applications.map((app) => (
+                    applications.slice(0, 3).map((app: any) => (
                       <div key={app.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
                           <div>
@@ -288,10 +289,10 @@ const StudentDashboard = () => {
                             ) : (
                               <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
                             )}
-                            <span className="capitalize">{app.status.replace(/_/g, ' ')}</span>
+                            <span className="capitalize">{app.status?.replace(/_/g, ' ') || 'Unknown'}</span>
                           </div>
                         </div>
-                        <Progress value={app.progress} className="h-2" />
+                        <Progress value={app.progress || 0} className="h-2" />
                       </div>
                     ))
                   ) : (

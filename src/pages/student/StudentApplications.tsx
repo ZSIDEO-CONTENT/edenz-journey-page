@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  BookOpen, Clock, CheckCircle2, AlertCircle, Eye, Plus, 
-  BarChart3, School, Calendar, GraduationCap
+  BookOpen, Clock, CheckCircle2, AlertCircle, Eye, 
+  BarChart3, School, Calendar, GraduationCap, Loader2
 } from 'lucide-react';
 import { 
   Card, CardContent, CardDescription, 
@@ -13,75 +13,65 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import StudentLayout from '@/components/student/StudentLayout';
-
-// Sample application data
-const sampleApplications = [
-  {
-    id: 1,
-    university: 'University of London',
-    program: 'MS Computer Science',
-    country: 'United Kingdom',
-    submissionDate: '2023-10-05',
-    status: 'in_review',
-    progress: 60,
-    steps: [
-      { name: 'Initial documentation', status: 'completed', date: '2023-09-28' },
-      { name: 'Application submission', status: 'completed', date: '2023-10-05' },
-      { name: 'University processing', status: 'in_progress', date: null },
-      { name: 'Interview scheduling', status: 'pending', date: null },
-      { name: 'Final decision', status: 'pending', date: null }
-    ]
-  },
-  {
-    id: 2,
-    university: 'Imperial College London',
-    program: 'MS Data Science',
-    country: 'United Kingdom',
-    submissionDate: '2023-10-01',
-    status: 'submitted',
-    progress: 80,
-    steps: [
-      { name: 'Initial documentation', status: 'completed', date: '2023-09-15' },
-      { name: 'Application submission', status: 'completed', date: '2023-10-01' },
-      { name: 'University processing', status: 'completed', date: '2023-10-10' },
-      { name: 'Interview scheduling', status: 'in_progress', date: null },
-      { name: 'Final decision', status: 'pending', date: null }
-    ]
-  },
-  {
-    id: 3,
-    university: 'Technical University of Munich',
-    program: 'MS Robotics',
-    country: 'Germany',
-    submissionDate: '2023-09-20',
-    status: 'offer_received',
-    progress: 100,
-    steps: [
-      { name: 'Initial documentation', status: 'completed', date: '2023-08-28' },
-      { name: 'Application submission', status: 'completed', date: '2023-09-20' },
-      { name: 'University processing', status: 'completed', date: '2023-09-30' },
-      { name: 'Interview scheduling', status: 'completed', date: '2023-10-05' },
-      { name: 'Final decision', status: 'completed', date: '2023-10-12' }
-    ]
-  }
-];
+import { getStudentApplications } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const StudentApplications = () => {
-  const [applications, setApplications] = useState(sampleApplications);
+  const [applications, setApplications] = useState([]);
   const [selectedApplication, setSelectedApplication] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        setIsLoading(true);
+        // Get user info from localStorage
+        const userString = localStorage.getItem('studentUser');
+        
+        if (!userString) {
+          toast({
+            title: 'Session expired',
+            description: 'Please log in again',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        const user = JSON.parse(userString);
+        const response = await getStudentApplications(user.id);
+        setApplications(response || []);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load application data',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, [toast]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'completed':
       case 'offer_received':
         return <Badge className="bg-green-500">Offer Received</Badge>;
+      case 'in_progress':
       case 'in_review':
         return <Badge className="bg-blue-500">In Review</Badge>;
       case 'submitted':
+      case 'pending':
+      case 'new':
         return <Badge className="bg-yellow-500">Submitted</Badge>;
       case 'rejected':
         return <Badge className="bg-red-500">Rejected</Badge>;
       default:
-        return <Badge>Unknown</Badge>;
+        return <Badge>{status.replace(/_/g, ' ')}</Badge>;
     }
   };
 
@@ -92,6 +82,7 @@ const StudentApplications = () => {
       case 'in_progress':
         return <Clock className="h-5 w-5 text-blue-500" />;
       case 'pending':
+      case 'new':
         return <Clock className="h-5 w-5 text-gray-300" />;
       default:
         return <AlertCircle className="h-5 w-5 text-gray-400" />;
@@ -108,188 +99,223 @@ const StudentApplications = () => {
               <TabsTrigger value="in_progress">In Progress</TabsTrigger>
               <TabsTrigger value="completed">Completed</TabsTrigger>
             </TabsList>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Application
-            </Button>
           </div>
 
           <TabsContent value="all" className="space-y-6">
-            {applications.map((app) => (
-              <Card key={app.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center">
-                        <School className="mr-2 h-5 w-5 text-primary" />
-                        {app.university}
-                      </CardTitle>
-                      <CardDescription>{app.program}</CardDescription>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                <p>Loading applications...</p>
+              </div>
+            ) : applications.length > 0 ? (
+              applications.map((app: any) => (
+                <Card key={app.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center">
+                          <School className="mr-2 h-5 w-5 text-primary" />
+                          {app.university_name}
+                        </CardTitle>
+                        <CardDescription>{app.program_name}</CardDescription>
+                      </div>
+                      {getStatusBadge(app.status)}
                     </div>
-                    {getStatusBadge(app.status)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="flex items-center">
-                      <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">{app.country}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">Submitted: {app.submissionDate}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">Progress: {app.progress}%</span>
-                    </div>
-                  </div>
-                  
-                  <Progress value={app.progress} className="h-2 mb-4" />
-                  
-                  {selectedApplication === app.id && (
-                    <div className="mt-4 space-y-4 border-t pt-4 animate-fade-in">
-                      <h4 className="font-medium">Application Timeline</h4>
-                      <div className="space-y-3">
-                        {app.steps.map((step, index) => (
-                          <div key={index} className="flex items-start">
-                            {getStatusIcon(step.status)}
-                            <div className="ml-3">
-                              <div className="font-medium">{step.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {step.status === 'completed' && step.date
-                                  ? `Completed on ${step.date}`
-                                  : step.status === 'in_progress'
-                                  ? 'In progress'
-                                  : 'Pending'}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="flex items-center">
+                        <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">
+                          {app.country || "Not specified"}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">
+                          Submitted: {app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">Progress: {app.progress || 0}%</span>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {selectedApplication === app.id ? 'Hide Details' : 'View Details'}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-
-            {applications.length === 0 && (
+                    
+                    <Progress value={app.progress || 0} className="h-2 mb-4" />
+                    
+                    {selectedApplication === app.id && app.steps && (
+                      <div className="mt-4 space-y-4 border-t pt-4 animate-fade-in">
+                        <h4 className="font-medium">Application Timeline</h4>
+                        <div className="space-y-3">
+                          {app.steps.map((step: any, index: number) => (
+                            <div key={index} className="flex items-start">
+                              {getStatusIcon(step.status)}
+                              <div className="ml-3">
+                                <div className="font-medium">{step.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {step.status === 'completed' && step.date
+                                    ? `Completed on ${step.date}`
+                                    : step.status === 'in_progress'
+                                    ? 'In progress'
+                                    : 'Pending'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {selectedApplication === app.id ? 'Hide Details' : 'View Details'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))
+            ) : (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium">No applications yet</h3>
-                <p className="text-muted-foreground mb-4">Start your educational journey by applying to universities.</p>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Application
-                </Button>
+                <p className="text-muted-foreground mb-4">
+                  Your processing officer will create applications for you once you complete your profile and upload required documents.
+                </p>
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="in_progress">
             <div className="space-y-6">
-              {applications.filter(app => app.status === 'in_review' || app.status === 'submitted').map((app) => (
-                <Card key={app.id} className="hover:shadow-md transition-shadow">
-                  {/* Same card content as "all" tab */}
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center">
-                          <School className="mr-2 h-5 w-5 text-primary" />
-                          {app.university}
-                        </CardTitle>
-                        <CardDescription>{app.program}</CardDescription>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                  <p>Loading applications...</p>
+                </div>
+              ) : applications.filter((app: any) => app.status === 'in_review' || app.status === 'in_progress' || app.status === 'submitted' || app.status === 'new' || app.status === 'pending').length > 0 ? (
+                applications.filter((app: any) => app.status === 'in_review' || app.status === 'in_progress' || app.status === 'submitted' || app.status === 'new' || app.status === 'pending').map((app: any) => (
+                  <Card key={app.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="flex items-center">
+                            <School className="mr-2 h-5 w-5 text-primary" />
+                            {app.university_name}
+                          </CardTitle>
+                          <CardDescription>{app.program_name}</CardDescription>
+                        </div>
+                        {getStatusBadge(app.status)}
                       </div>
-                      {getStatusBadge(app.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center">
-                        <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">{app.country}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center">
+                          <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">
+                            {app.country || "Not specified"}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">
+                            Submitted: {app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">Progress: {app.progress || 0}%</span>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">Submitted: {app.submissionDate}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">Progress: {app.progress}%</span>
-                      </div>
-                    </div>
-                    
-                    <Progress value={app.progress} className="h-2 mb-4" />
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+                      
+                      <Progress value={app.progress || 0} className="h-2 mb-4" />
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">No applications in progress</h3>
+                  <p className="text-muted-foreground">You don't have any applications currently in progress.</p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="completed">
             <div className="space-y-6">
-              {applications.filter(app => app.status === 'offer_received' || app.status === 'rejected').map((app) => (
-                <Card key={app.id} className="hover:shadow-md transition-shadow">
-                  {/* Same card content as "all" tab */}
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center">
-                          <School className="mr-2 h-5 w-5 text-primary" />
-                          {app.university}
-                        </CardTitle>
-                        <CardDescription>{app.program}</CardDescription>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                  <p>Loading applications...</p>
+                </div>
+              ) : applications.filter((app: any) => app.status === 'offer_received' || app.status === 'rejected' || app.status === 'completed').length > 0 ? (
+                applications.filter((app: any) => app.status === 'offer_received' || app.status === 'rejected' || app.status === 'completed').map((app: any) => (
+                  <Card key={app.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="flex items-center">
+                            <School className="mr-2 h-5 w-5 text-primary" />
+                            {app.university_name}
+                          </CardTitle>
+                          <CardDescription>{app.program_name}</CardDescription>
+                        </div>
+                        {getStatusBadge(app.status)}
                       </div>
-                      {getStatusBadge(app.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center">
-                        <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">{app.country}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center">
+                          <GraduationCap className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">
+                            {app.country || "Not specified"}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">
+                            Submitted: {app.created_at ? new Date(app.created_at).toISOString().split('T')[0] : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
+                          <span className="text-sm text-muted-foreground">Progress: {app.progress || 0}%</span>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">Submitted: {app.submissionDate}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <BarChart3 className="h-5 w-5 text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">Progress: {app.progress}%</span>
-                      </div>
-                    </div>
-                    
-                    <Progress value={app.progress} className="h-2 mb-4" />
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+                      
+                      <Progress value={app.progress || 0} className="h-2 mb-4" />
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setSelectedApplication(selectedApplication === app.id ? null : app.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">No completed applications</h3>
+                  <p className="text-muted-foreground">You don't have any completed applications yet.</p>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
