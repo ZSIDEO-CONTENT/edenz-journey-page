@@ -6,7 +6,6 @@ import { MessageCircle, Send, Search, BookOpen, Globe, GraduationCap, Sparkles, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton';
 import { sendChatMessage, ChatMessage } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +19,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
   const [progressValue, setProgressValue] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Loading stages for a more engaging experience
@@ -78,14 +78,38 @@ const Chat = () => {
     setIsLoading(true);
     
     try {
-      // Send message to API
+      // Send message to API with session ID if available
       const response = await sendChatMessage(message);
+      
+      // Store the session ID for future messages
+      if (response.session_id && !sessionId) {
+        setSessionId(response.session_id);
+      }
       
       // Add bot response
       setMessages(prev => [...prev, { 
         content: response.response,
         sender: 'bot'
       }]);
+      
+      // Handle booking intent if detected
+      if (response.action === "booking_intent") {
+        setTimeout(() => {
+          toast({
+            title: "Booking Available",
+            description: "Would you like to book a consultation with our experts?",
+            action: (
+              <Button 
+                onClick={handleBookingRedirect}
+                variant="outline"
+                size="sm"
+              >
+                Book Now
+              </Button>
+            )
+          });
+        }, 1000);
+      }
       
       setIsLoading(false);
     } catch (error) {

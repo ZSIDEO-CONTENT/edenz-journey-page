@@ -1,4 +1,3 @@
-
 // Authentication functions
 export const adminLogin = async ({ email, password }: { email: string; password: string }) => {
   try {
@@ -534,29 +533,6 @@ export const getStudentRecommendations = async (studentId: string) => {
 };
 
 // Interface definitions
-export interface Consultation {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  date: string;
-  time?: string;
-  message?: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  created_at: string;
-}
-
-export interface ConsultationBookingData {
-  name: string;
-  email: string;
-  phone: string;
-  preferredDate: Date;
-  preferredTime: string;
-  service: string;
-  destination?: string;
-  message?: string;
-}
-
 export interface ChatMessage {
   content: string;
   sender: 'user' | 'bot';
@@ -636,7 +612,7 @@ export const submitConsultationBooking = async (bookingData: ConsultationBooking
 // Chat API functions
 export const sendChatMessage = async (message: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/chat/message", {
+    const response = await fetch("http://localhost:8000/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
