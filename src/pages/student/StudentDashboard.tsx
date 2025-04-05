@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FileText, BookOpen, Clock, CheckCircle2, AlertCircle,
-  FileUp, ArrowRight, BarChart3
+  FileUp, ArrowRight, BarChart3, Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -26,6 +26,7 @@ const StudentDashboard = () => {
   const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>([]);
   const [onboardingProgress, setOnboardingProgress] = useState(0);
   const [applications, setApplications] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -75,6 +76,18 @@ const StudentDashboard = () => {
               const applicationsData = await applicationsResponse.json();
               setApplications(applicationsData || []);
             }
+            
+            // Fetch documents
+            const documentsResponse = await fetch(`http://localhost:8000/api/documents/${user.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (documentsResponse.ok) {
+              const documentsData = await documentsResponse.json();
+              setDocuments(documentsData || []);
+            }
           }
         } catch (apiError) {
           console.warn('Could not fetch additional dashboard data:', apiError);
@@ -96,6 +109,16 @@ const StudentDashboard = () => {
     fetchUserData();
   }, [toast, navigate]);
 
+  // Calculate document completion
+  const totalRequiredDocs = 5; // This should ideally come from the API
+  const uploadedDocuments = documents ? documents.length : 0;
+  const documentProgress = (uploadedDocuments / totalRequiredDocs) * 100;
+  
+  // Get required but missing documents
+  const requiredDocTypes = ["passport", "academic_transcript", "cv_resume", "ielts", "personal_statement"];
+  const uploadedDocTypes = documents ? documents.map(doc => doc.type) : [];
+  const missingDocTypes = requiredDocTypes.filter(type => !uploadedDocTypes.includes(type));
+
   return (
     <StudentLayout title="Dashboard">
       <div className="animate-fade-in">
@@ -113,7 +136,7 @@ const StudentDashboard = () => {
         ) : userData ? (
           <>
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-2">Welcome back, {userData.name}!</h2>
+              <h2 className="text-2xl font-semibold mb-2">Welcome back, {userData.name || 'Student'}!</h2>
               <p className="text-muted-foreground">
                 Track your application progress and manage your documents.
               </p>
@@ -168,10 +191,10 @@ const StudentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {userData.documentsUploaded || 0}/{userData.documentsRequired || 5}
+                    {uploadedDocuments}/{totalRequiredDocs}
                   </div>
                   <Progress 
-                    value={(userData.documentsUploaded || 0) / (userData.documentsRequired || 5) * 100} 
+                    value={documentProgress}
                     className="mt-2"
                   />
                 </CardContent>
@@ -192,7 +215,9 @@ const StudentDashboard = () => {
                 <CardContent>
                   <div className="text-3xl font-bold">{applications ? applications.length : 0}</div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    Active applications
+                    {applications && applications.length > 0 
+                      ? 'Active applications' 
+                      : 'No active applications yet'}
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -210,14 +235,25 @@ const StudentDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">0</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    AI-powered suggestions
-                  </div>
+                  {onboardingProgress >= 70 ? (
+                    <>
+                      <div className="text-3xl font-bold">0</div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Ready for AI recommendations
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Complete your profile (at least 70%) to unlock AI recommendations
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter>
                   <Link to="/student/recommendations" className="text-primary text-sm hover:underline flex items-center">
-                    View recommendations <ArrowRight className="ml-1 h-4 w-4" />
+                    {onboardingProgress >= 70 
+                      ? 'View recommendations' 
+                      : 'Complete profile first'}
+                    <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </CardFooter>
               </Card>
@@ -261,7 +297,7 @@ const StudentDashboard = () => {
                   ) : (
                     <div className="text-center py-4">
                       <p className="text-muted-foreground">No applications yet.</p>
-                      <p className="text-sm mt-2">Your processing officer will create applications for you.</p>
+                      <p className="text-sm mt-2">Your processing officer will create applications for you once you complete your profile and upload required documents.</p>
                     </div>
                   )}
                 </div>
@@ -287,35 +323,26 @@ const StudentDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 rounded-md bg-background">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                      <span>Passport Copy</span>
-                    </div>
-                    <Link to="/student/documents">
-                      <Button size="sm">Upload</Button>
-                    </Link>
+                {missingDocTypes.length > 0 ? (
+                  <div className="space-y-2">
+                    {missingDocTypes.map((docType, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 rounded-md bg-background">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                          <span className="capitalize">{docType.replace(/_/g, ' ')}</span>
+                        </div>
+                        <Link to="/student/documents">
+                          <Button size="sm">Upload</Button>
+                        </Link>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-md bg-background">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                      <span>Academic Transcripts</span>
-                    </div>
-                    <Link to="/student/documents">
-                      <Button size="sm">Upload</Button>
-                    </Link>
+                ) : (
+                  <div className="text-center py-4">
+                    <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-muted-foreground">All required documents have been uploaded!</p>
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-md bg-background">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 rounded-full bg-amber-500 mr-2"></div>
-                      <span>IELTS Certificate</span>
-                    </div>
-                    <Link to="/student/documents">
-                      <Button size="sm">Upload</Button>
-                    </Link>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </>
