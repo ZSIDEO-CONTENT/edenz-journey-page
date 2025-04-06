@@ -262,12 +262,15 @@ export const isProcessingAuthenticated = () => {
 
 export const adminLogin = async (email: string, password: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/admin/login", {
+    const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ 
+        username: email, 
+        password: password 
+      }),
     });
 
     if (!response.ok) {
@@ -275,7 +278,13 @@ export const adminLogin = async (email: string, password: string) => {
     }
 
     const data = await response.json();
-    localStorage.setItem("adminToken", data.token);
+    
+    // Check if the user has admin role
+    if (data.user.role !== "admin") {
+      throw new Error("Not authorized as admin");
+    }
+    
+    localStorage.setItem("adminToken", data.access_token);
     localStorage.setItem("adminUser", JSON.stringify(data.user));
     return data;
   } catch (error) {
@@ -286,12 +295,15 @@ export const adminLogin = async (email: string, password: string) => {
 
 export const processingLogin = async (email: string, password: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/processing/login", {
+    const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ 
+        username: email, 
+        password: password 
+      }),
     });
 
     if (!response.ok) {
@@ -299,7 +311,13 @@ export const processingLogin = async (email: string, password: string) => {
     }
 
     const data = await response.json();
-    localStorage.setItem("processingToken", data.token);
+    
+    // Check if the user has processing role
+    if (data.user.role !== "processing") {
+      throw new Error("Not authorized as processing team member");
+    }
+    
+    localStorage.setItem("processingToken", data.access_token);
     localStorage.setItem("processingUser", JSON.stringify(data.user));
     return data;
   } catch (error) {
@@ -310,12 +328,15 @@ export const processingLogin = async (email: string, password: string) => {
 
 export const studentLogin = async (email: string, password: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/student/login", {
+    const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ 
+        username: email, 
+        password: password 
+      }),
     });
 
     if (!response.ok) {
@@ -323,7 +344,13 @@ export const studentLogin = async (email: string, password: string) => {
     }
 
     const data = await response.json();
-    localStorage.setItem("studentToken", data.token);
+    
+    // Check if the user has student role
+    if (data.user.role !== "student") {
+      throw new Error("Not authorized as student");
+    }
+    
+    localStorage.setItem("studentToken", data.access_token);
     localStorage.setItem("studentUser", JSON.stringify(data.user));
     return data;
   } catch (error) {

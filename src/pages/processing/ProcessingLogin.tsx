@@ -20,7 +20,6 @@ const ProcessingLogin = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Check if already authenticated
     const checkAuth = async () => {
       if (await isProcessingAuthenticated()) {
         navigate("/processing/dashboard");
