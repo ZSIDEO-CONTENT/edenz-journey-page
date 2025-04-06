@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<{sender: string, content: string}[]>([
     { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +70,7 @@ const Chat = () => {
     if (!message.trim() || isLoading) return;
     
     // Add user message
-    const userMessage: ChatMessage = { content: message, sender: 'user' };
+    const userMessage = { content: message, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
     // Clear input and set loading

@@ -46,42 +46,22 @@ const ProcessingRegister = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-      
-      const adminToken = localStorage.getItem('adminToken');
-      if (!adminToken) {
-        toast({
-          title: "Authentication error",
-          description: "Admin token not found. Please log in again.",
-          variant: "destructive",
-        });
-        navigate('/admin/login');
-        return;
-      }
-      
-      await registerProcessingMember({
-        name: values.name,
-        email: values.email,
-        password: values.password,
-        phone: values.phone,
-        managed_regions: values.managed_regions
-      }, adminToken);
+      await registerProcessingMember(values);
       
       toast({
-        title: "Success!",
-        description: "Processing team member has been registered",
+        title: "Success",
+        description: "Processing team member registered successfully",
       });
       
       form.reset();
-      
-      // Redirect to admin dashboard
-      navigate('/admin/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error);
       toast({
         title: "Registration failed",
-        description: error.message || "Failed to register processing team member",
+        description: "There was an error registering the processing team member",
         variant: "destructive",
       });
     } finally {

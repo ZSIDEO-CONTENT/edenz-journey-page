@@ -89,15 +89,20 @@ const BookConsultation = () => {
     setNotificationSent(null);
     
     try {
+      // Convert the form data to match the API interface
       const bookingData: ConsultationBookingData = {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        date: format(data.preferredDate, 'yyyy-MM-dd'),
+        time: data.preferredTime,
+        consultationType: data.service,
+        destination: data.destination || '',
+        message: data.message,
+        // Include the original data format as well to ensure compatibility
         preferredDate: data.preferredDate,
         preferredTime: data.preferredTime,
-        service: data.service,
-        destination: data.destination,
-        message: data.message
+        service: data.service
       };
       
       const notifications = await submitConsultationBooking(bookingData);

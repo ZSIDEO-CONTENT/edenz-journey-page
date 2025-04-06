@@ -49,7 +49,7 @@ const AdminDashboard = () => {
       setConsultations(prev => 
         prev.map(consultation => 
           consultation.id === consultationId 
-            ? { ...consultation, status: status as 'pending' | 'confirmed' | 'completed' | 'cancelled' } 
+            ? { ...consultation, status: status } 
             : consultation
         )
       );
@@ -162,7 +162,7 @@ const AdminDashboard = () => {
                       </div>
                     )}
                     <div className="text-xs text-gray-500 mt-2">
-                      Booked on: {new Date(consultation.created_at).toLocaleString()}
+                      Booked on: {new Date(consultation.createdAt || consultation.created_at || '').toLocaleString()}
                     </div>
                   </div>
                 </CardContent>

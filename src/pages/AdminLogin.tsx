@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -42,10 +41,7 @@ const AdminLogin = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await adminLogin({
-        email: values.email,
-        password: values.password,
-      });
+      await adminLogin(values.email, values.password);
       
       toast({
         title: "Login successful",

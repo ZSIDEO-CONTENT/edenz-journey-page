@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
@@ -23,7 +22,6 @@ import ProcessingLayout from '@/components/processing/ProcessingLayout';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentDetails, getStudentDocuments, createStudentApplication, generateStudentRecommendation } from '@/lib/api';
 
-// Define form schema for creating an application
 const applicationSchema = z.object({
   university_name: z.string().min(1, 'University name is required'),
   program_name: z.string().min(1, 'Program name is required'),
@@ -49,7 +47,6 @@ const ProcessingStudent = () => {
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
 
-  // Initialize form for creating applications
   const form = useForm<z.infer<typeof applicationSchema>>({
     resolver: zodResolver(applicationSchema),
     defaultValues: {
@@ -71,7 +68,6 @@ const ProcessingStudent = () => {
       try {
         setIsLoading(true);
         
-        // Get student details
         const data = await getStudentDetails(id);
         
         if (data) {
@@ -119,11 +115,9 @@ const ProcessingStudent = () => {
         description: 'The application has been created successfully',
       });
       
-      // Refresh the student data to include new application
       const updatedData = await getStudentDetails(id);
       setApplications(updatedData.applications || []);
       
-      // Close dialog and reset form
       setIsCreateDialogOpen(false);
       form.reset();
     } catch (error) {
@@ -151,7 +145,6 @@ const ProcessingStudent = () => {
         description: 'AI recommendation has been generated successfully',
       });
       
-      // Navigate to recommendations page
       navigate(`/processing/recommendations/${id}`);
     } catch (error) {
       console.error('Error generating recommendation:', error);
@@ -174,7 +167,6 @@ const ProcessingStudent = () => {
         </div>
       ) : studentData ? (
         <div className="space-y-6">
-          {/* Student Profile Header */}
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="w-full md:w-1/3">
               <Card>
@@ -272,7 +264,6 @@ const ProcessingStudent = () => {
             </div>
           </div>
           
-          {/* Tabs for different sections */}
           <Tabs defaultValue="applications" className="w-full">
             <TabsList className="grid grid-cols-3 w-full md:w-auto">
               <TabsTrigger value="applications">Applications</TabsTrigger>
@@ -280,7 +271,6 @@ const ProcessingStudent = () => {
               <TabsTrigger value="education">Education</TabsTrigger>
             </TabsList>
             
-            {/* Applications Tab */}
             <TabsContent value="applications" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Applications</h2>
@@ -528,7 +518,6 @@ const ProcessingStudent = () => {
               )}
             </TabsContent>
             
-            {/* Documents Tab */}
             <TabsContent value="documents" className="space-y-4">
               <h2 className="text-xl font-semibold">Documents</h2>
               
@@ -579,7 +568,6 @@ const ProcessingStudent = () => {
               )}
             </TabsContent>
             
-            {/* Education Tab */}
             <TabsContent value="education" className="space-y-4">
               <h2 className="text-xl font-semibold">Education History</h2>
               

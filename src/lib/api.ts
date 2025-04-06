@@ -347,6 +347,7 @@ export const submitContactForm = async (formData: any) => {
   }
 };
 
+// Updated to match the expected structure in BookConsultation.tsx
 export interface ConsultationBookingData {
   name: string;
   email: string;
@@ -354,13 +355,17 @@ export interface ConsultationBookingData {
   date: string;
   time: string;
   consultationType: string;
-  destination: string;
-  notes: string;
+  destination?: string;
+  message?: string;
+  // Adding the fields that are used in BookConsultation.tsx
+  preferredDate?: Date;
+  preferredTime?: string;
+  service?: string;
 }
 
 export const submitConsultationBooking = async (formData: ConsultationBookingData) => {
   try {
-    const response = await fetch("http://localhost:8000/api/consultations/book", {
+    const response = await fetch("http://localhost:8000/api/consultation", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -379,6 +384,7 @@ export const submitConsultationBooking = async (formData: ConsultationBookingDat
   }
 };
 
+// Updated to match actual properties used in AdminDashboard
 export interface Consultation {
   id: string;
   name: string;
@@ -391,6 +397,8 @@ export interface Consultation {
   notes: string;
   status: string;
   createdAt: string;
+  message?: string;
+  created_at?: string;
 }
 
 export const getConsultations = async () => {
@@ -514,16 +522,18 @@ export interface ChatMessage {
   sender: string;
   message: string;
   timestamp?: string;
+  // Adding content field to support Chat.tsx
+  content?: string;
 }
 
-export const sendChatMessage = async (message: ChatMessage) => {
+export const sendChatMessage = async (message: string) => {
   try {
     const response = await fetch("http://localhost:8000/api/chat/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(message),
+      body: JSON.stringify({ message }),
     });
 
     if (!response.ok) {
