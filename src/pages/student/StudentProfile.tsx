@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -20,44 +21,27 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StudentLayout from '@/components/student/StudentLayout';
+import { getStudentProfile, updateStudentProfile } from '@/lib/api';
 
 interface Education {
   degree: string;
   institution: string;
-  yearCompleted: string;
+  year_completed: string;
   gpa: string;
 }
 
 interface UserData {
+  id: string;
   name: string;
   email: string;
   phone: string;
   address: string;
   dob: string;
-  profileImage: string;
+  profile_picture: string;
   bio: string;
   education: Education[];
   skills: string[];
 }
-
-const sampleUserData: UserData = {
-  name: 'Muhammad Ali',
-  email: 'muhammad.ali@example.com',
-  phone: '+92 300 1234567',
-  address: 'House #123, Street 5, F-7/3, Islamabad, Pakistan',
-  dob: '1998-05-15',
-  profileImage: '',
-  bio: 'Computer Science student seeking to pursue Masters abroad. Interested in Artificial Intelligence and Machine Learning.',
-  education: [
-    {
-      degree: 'Bachelors in Computer Science',
-      institution: 'FAST National University',
-      yearCompleted: '2022',
-      gpa: '3.8/4.0'
-    }
-  ],
-  skills: ['Python', 'JavaScript', 'Machine Learning', 'Data Analysis']
-};
 
 const profileFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -71,7 +55,7 @@ const profileFormSchema = z.object({
 const educationFormSchema = z.object({
   degree: z.string().min(2, 'Degree name is required'),
   institution: z.string().min(2, 'Institution name is required'),
-  yearCompleted: z.string().min(4, 'Year is required'),
+  year_completed: z.string().min(4, 'Year is required'),
   gpa: z.string(),
 });
 
@@ -79,40 +63,118 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 type EducationFormValues = z.infer<typeof educationFormSchema>;
 
 const StudentProfile = () => {
-  const [userData, setUserData] = useState<UserData>(sampleUserData);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const { toast } = useToast();
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      address: userData.address,
-      dob: userData.dob,
-      bio: userData.bio,
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      dob: '',
+      bio: '',
     },
   });
 
   const educationForm = useForm<EducationFormValues>({
     resolver: zodResolver(educationFormSchema),
     defaultValues: {
-      degree: userData.education[0]?.degree || '',
-      institution: userData.education[0]?.institution || '',
-      yearCompleted: userData.education[0]?.yearCompleted || '',
-      gpa: userData.education[0]?.gpa || '',
+      degree: '',
+      institution: '',
+      year_completed: '',
+      gpa: '',
     },
   });
+  
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      try {
+        setIsPageLoading(true);
+        
+        // Get user info from localStorage
+        const userString = localStorage.getItem('studentUser');
+        if (!userString) {
+          throw new Error('User data not found');
+        }
+        
+        const user = JSON.parse(userString);
+        
+        // Fetch user profile data
+        const profileData = await getStudentProfile(user.id);
+        
+        // Set the user data
+        setUserData({
+          id: user.id,
+          name: profileData.name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          address: profileData.address || '',
+          dob: profileData.dob || '',
+          profile_picture: profileData.profile_picture || '',
+          bio: profileData.bio || '',
+          education: profileData.education || [],
+          skills: profileData.skills || []
+        });
+        
+        // Update form with fetched data
+        profileForm.reset({
+          name: profileData.name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          address: profileData.address || '',
+          dob: profileData.dob || '',
+          bio: profileData.bio || '',
+        });
+        
+        // If education data exists, update education form
+        if (profileData.education && profileData.education.length > 0) {
+          educationForm.reset({
+            degree: profileData.education[0].degree || '',
+            institution: profileData.education[0].institution || '',
+            year_completed: profileData.education[0].year_completed || '',
+            gpa: profileData.education[0].gpa || '',
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error loading student profile:', error);
+        toast({
+          title: 'Error loading profile',
+          description: 'Could not load your profile data. Please try again later.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsPageLoading(false);
+      }
+    };
+
+    fetchStudentProfile();
+  }, [toast]);
 
   const onProfileSubmit = async (values: ProfileFormValues) => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!userData) {
+        throw new Error('User data not available');
+      }
       
-      // Update user data
+      // Update user data in the API
+      await updateStudentProfile(userData.id, {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        dob: values.dob,
+        bio: values.bio,
+        profile_picture: userData.profile_picture,
+      });
+      
+      // Update local state
       setUserData({
         ...userData,
         ...values
@@ -123,6 +185,7 @@ const StudentProfile = () => {
         description: 'Your profile information has been updated successfully',
       });
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
         title: 'Error',
         description: 'There was an error updating your profile',
@@ -137,13 +200,24 @@ const StudentProfile = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // In a real implementation, you would update the education information in the API
+      // For now, we'll just update the local state
       
-      // Update education data with non-optional values
+      if (!userData) {
+        throw new Error('User data not available');
+      }
+      
+      // Update education data
+      const updatedEducation = [{
+        degree: values.degree,
+        institution: values.institution,
+        year_completed: values.year_completed,
+        gpa: values.gpa,
+      }];
+      
       setUserData({
         ...userData,
-        education: [values as Education]
+        education: updatedEducation
       });
       
       toast({
@@ -162,15 +236,15 @@ const StudentProfile = () => {
   };
 
   const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files && e.target.files.length > 0 && userData) {
       const file = e.target.files[0];
       const reader = new FileReader();
       
       reader.onload = () => {
-        if (reader.result) {
+        if (reader.result && userData) {
           setUserData({
             ...userData,
-            profileImage: reader.result.toString(),
+            profile_picture: reader.result.toString(),
           });
           
           toast({
@@ -183,6 +257,17 @@ const StudentProfile = () => {
       reader.readAsDataURL(file);
     }
   };
+
+  if (isPageLoading) {
+    return (
+      <StudentLayout title="My Profile">
+        <div className="flex items-center justify-center h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Loading profile...</span>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout title="My Profile">
@@ -206,9 +291,9 @@ const StudentProfile = () => {
                 <div className="space-y-6">
                   <div className="flex flex-col items-center justify-center">
                     <Avatar className="h-24 w-24 mb-4 relative group">
-                      <AvatarImage src={userData.profileImage} />
+                      <AvatarImage src={userData?.profile_picture} />
                       <AvatarFallback className="text-2xl">
-                        {userData.name.charAt(0).toUpperCase()}
+                        {userData?.name?.charAt(0).toUpperCase() || '?'}
                       </AvatarFallback>
                       <label
                         htmlFor="profileImage"
@@ -383,7 +468,7 @@ const StudentProfile = () => {
                       
                       <FormField
                         control={educationForm.control}
-                        name="yearCompleted"
+                        name="year_completed"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Year Completed</FormLabel>
@@ -439,7 +524,7 @@ const StudentProfile = () => {
                   <div>
                     <label className="text-sm font-medium">Your Skills</label>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {userData.skills.map((skill, index) => (
+                      {userData?.skills && userData.skills.map((skill, index) => (
                         <div 
                           key={index} 
                           className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm flex items-center"
@@ -450,6 +535,9 @@ const StudentProfile = () => {
                           </button>
                         </div>
                       ))}
+                      {(!userData?.skills || userData.skills.length === 0) && (
+                        <p className="text-sm text-muted-foreground">No skills added yet</p>
+                      )}
                     </div>
                   </div>
                   
