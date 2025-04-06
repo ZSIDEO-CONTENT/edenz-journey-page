@@ -1,383 +1,277 @@
-import { useState } from 'react';
-import {
-  FileText, Upload, X, CheckCircle, Download, FileSearch,
-  Plus, Loader2, AlertCircle, Edit
-} from 'lucide-react';
+
+import { useState, useEffect } from 'react';
 import { 
-  Dialog, DialogContent, DialogDescription, 
-  DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+  FileText, Upload, Download, Trash2, CheckCircle, XCircle, 
+  Clock, AlertCircle, Loader2, FileUp
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import StudentLayout from '@/components/student/StudentLayout';
+import { getStudentDocuments, getRequiredDocuments } from '@/lib/api';
 
-interface DocumentItem {
+interface Document {
   id: string;
   name: string;
+  type: string;
   status: string;
-  date: string | null;
-  fileUrl?: string;
+  file_url: string;
+  feedback?: string;
+  updated_at?: string;
+}
+
+interface RequiredDocument {
+  name: string;
+  type: string;
+  description: string;
+  document_id?: string;
+  status?: string;
+  submitted?: boolean;
   feedback?: string;
 }
 
-interface DocumentCategory {
-  id: string;
-  name: string;
-  description: string;
-  documents: DocumentItem[];
-}
-
-const documentCategories: DocumentCategory[] = [
-  { 
-    id: 'academic', 
-    name: 'Academic Documents',
-    description: 'Transcripts, certificates, and degrees',
-    documents: [
-      { id: 'transcript', name: 'Academic Transcript', status: 'uploaded', date: '2023-09-15', fileUrl: '#' },
-      { id: 'degree', name: 'Bachelor Degree', status: 'rejected', date: '2023-09-10', feedback: 'Document is not clear, please upload a better quality scan' },
-      { id: 'certificate', name: 'HSSC Certificate', status: 'required', date: null }
-    ]
-  },
-  { 
-    id: 'identity', 
-    name: 'Identity Documents', 
-    description: 'Passport, ID cards, and personal documents',
-    documents: [
-      { id: 'passport', name: 'Passport', status: 'verified', date: '2023-09-05', fileUrl: '#' },
-      { id: 'id_card', name: 'National ID Card', status: 'pending', date: '2023-09-02', fileUrl: '#' },
-      { id: 'photo', name: 'Passport-sized Photo', status: 'required', date: null }
-    ] 
-  },
-  { 
-    id: 'language', 
-    name: 'Language Tests', 
-    description: 'IELTS, TOEFL, and other language tests',
-    documents: [
-      { id: 'ielts', name: 'IELTS Certificate', status: 'uploaded', date: '2023-08-25', fileUrl: '#' }
-    ] 
-  },
-  { 
-    id: 'financial', 
-    name: 'Financial Documents', 
-    description: 'Bank statements, sponsorship letters',
-    documents: [
-      { id: 'bank', name: 'Bank Statement', status: 'required', date: null },
-      { id: 'sponsorship', name: 'Sponsorship Letter', status: 'required', date: null }
-    ] 
-  },
-  { 
-    id: 'custom', 
-    name: 'Custom Documents', 
-    description: 'Any additional documents you need to upload',
-    documents: [] 
-  }
-];
-
 const StudentDocuments = () => {
-  const [categories, setCategories] = useState<DocumentCategory[]>(documentCategories);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
-  const [customDocName, setCustomDocName] = useState('');
-  const [customDocCategory, setCustomDocCategory] = useState('custom');
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [requiredDocuments, setRequiredDocuments] = useState<RequiredDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const uploadDocument = async (docId: string, categoryId: string) => {
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploadingDocId(docId);
-
-    try {
-      // Simulate API call to upload document
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update the document status in state
-      const newCategories = categories.map(category => {
-        if (category.id === categoryId) {
-          return {
-            ...category,
-            documents: category.documents.map(doc => {
-              if (doc.id === docId) {
-                return {
-                  ...doc,
-                  status: 'uploaded',
-                  date: new Date().toISOString().split('T')[0],
-                  fileUrl: '#'
-                };
-              }
-              return doc;
-            })
-          };
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get user info from localStorage
+        const userString = localStorage.getItem('studentUser');
+        if (!userString) {
+          throw new Error('User data not found');
         }
-        return category;
-      });
-      
-      setCategories(newCategories);
-      setSelectedFile(null);
-      
+        
+        const user = JSON.parse(userString);
+        
+        // Fetch all documents for the student
+        const userDocuments = await getStudentDocuments(user.id);
+        console.log('Fetched documents:', userDocuments);
+        
+        // Fetch required documents
+        const required = await getRequiredDocuments(user.id);
+        console.log('Required documents:', required);
+        
+        setDocuments(userDocuments || []);
+        setRequiredDocuments(required || []);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your documents. Please try again later.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [toast]);
+
+  const handleUpload = async (documentType: string) => {
+    // In a real implementation, this would open a file picker and upload the document
+    setIsUploading(true);
+    
+    setTimeout(() => {
       toast({
-        title: "Document uploaded",
-        description: "Your document has been successfully uploaded and is pending verification",
+        title: 'Upload Feature',
+        description: 'Document upload functionality would be implemented here',
       });
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "There was an error uploading your document. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setUploadingDocId(null);
-    }
+      setIsUploading(false);
+    }, 1500);
   };
 
-  const addCustomDocument = () => {
-    if (!customDocName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter a name for your document",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleViewDocument = (fileUrl: string) => {
+    // Open the document in a new tab
+    window.open(fileUrl, '_blank');
+  };
 
-    // Generate a unique ID from the name
-    const docId = 'custom_' + customDocName.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
-    
-    // Add the custom document to the selected category
-    const newCategories = categories.map(category => {
-      if (category.id === customDocCategory) {
-        return {
-          ...category,
-          documents: [
-            ...category.documents,
-            {
-              id: docId,
-              name: customDocName,
-              status: 'required',
-              date: null
-            }
-          ]
-        };
-      }
-      return category;
-    });
-    
-    setCategories(newCategories);
-    setCustomDocName('');
-    
-    toast({
-      title: "Document added",
-      description: `${customDocName} has been added to your required documents list`,
-    });
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejected</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'uploaded':
-        return <FileText className="h-5 w-5 text-yellow-500" />;
-      case 'verified':
+      case 'approved':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'rejected':
-        return <X className="h-5 w-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-red-500" />;
       case 'pending':
-        return <FileSearch className="h-5 w-5 text-blue-500" />;
+        return <Clock className="h-5 w-5 text-amber-500" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-400" />;
+        return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+
+  const formatDocumentType = (type: string) => {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const filterDocuments = () => {
+    if (activeTab === 'all') {
+      return documents;
+    } else {
+      return documents.filter(doc => doc.status === activeTab);
     }
   };
 
   return (
     <StudentLayout title="My Documents">
       <div className="animate-fade-in">
-        <Tabs defaultValue={documentCategories[0].id}>
-          <div className="flex justify-between items-center mb-6">
-            <TabsList className="overflow-x-auto">
-              {categories.map((category) => (
-                <TabsTrigger key={category.id} value={category.id}>
-                  {category.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="ml-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Custom Document
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Custom Document</DialogTitle>
-                  <DialogDescription>
-                    Create a custom document entry for your specific needs.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="docName">Document Name</Label>
-                    <Input
-                      id="docName"
-                      placeholder="e.g., Research Publication"
-                      value={customDocName}
-                      onChange={(e) => setCustomDocName(e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Category</Label>
-                    <select
-                      id="category"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={customDocCategory}
-                      onChange={(e) => setCustomDocCategory(e.target.value)}
-                    >
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button onClick={addCustomDocument}>Add Document</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-2 text-lg">Loading documents...</span>
           </div>
+        ) : (
+          <>
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl">
+                  <FileUp className="mr-2 h-5 w-5 text-primary" />
+                  Required Documents
+                </CardTitle>
+                <CardDescription>
+                  These documents are required for your applications. Upload them to proceed with your application process.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {requiredDocuments.length > 0 ? (
+                    requiredDocuments.map((doc, index) => (
+                      <div key={index} className="flex justify-between items-center border p-4 rounded-md">
+                        <div className="flex-1">
+                          <h3 className="font-medium">{doc.name}</h3>
+                          <p className="text-sm text-muted-foreground">{doc.description}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {doc.submitted ? (
+                            <>
+                              {getStatusBadge(doc.status || 'pending')}
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => doc.document_id && handleViewDocument(documents.find(d => d.id === doc.document_id)?.file_url || '')}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                View
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              size="sm"
+                              onClick={() => handleUpload(doc.type)}
+                              disabled={isUploading}
+                            >
+                              {isUploading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  Upload
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No required documents found.</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-          {categories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="animate-fade-in">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{category.name}</CardTitle>
-                  <CardDescription>{category.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">My Uploaded Documents</CardTitle>
+                <Tabs defaultValue="all" onValueChange={setActiveTab}>
+                  <TabsList>
+                    <TabsTrigger value="all">All Documents</TabsTrigger>
+                    <TabsTrigger value="approved">Approved</TabsTrigger>
+                    <TabsTrigger value="pending">Pending</TabsTrigger>
+                    <TabsTrigger value="rejected">Rejected</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </CardHeader>
+              <CardContent>
+                {documents.length > 0 ? (
                   <div className="space-y-4">
-                    {category.documents.length > 0 ? (
-                      category.documents.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg transition-all hover:shadow-sm"
-                        >
-                          <div className="flex items-center mb-4 md:mb-0">
-                            {getStatusIcon(doc.status)}
-                            <div className="ml-4">
-                              <div className="font-medium">{doc.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {doc.status === 'required' ? (
-                                  'Required - Not uploaded yet'
-                                ) : (
-                                  <>
-                                    Status: <span className="capitalize">{doc.status}</span>
-                                    {doc.date && ` • Uploaded: ${doc.date}`}
-                                  </>
-                                )}
-                                {doc.feedback && (
-                                  <div className="text-red-500 mt-1">{doc.feedback}</div>
-                                )}
-                              </div>
+                    {filterDocuments().map((doc) => (
+                      <div key={doc.id} className="border rounded-md overflow-hidden">
+                        <div className="flex justify-between items-center p-4">
+                          <div className="flex items-center">
+                            <FileText className="h-8 w-8 text-primary mr-3" />
+                            <div>
+                              <h3 className="font-medium">{doc.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDocumentType(doc.type)}
+                              </p>
                             </div>
                           </div>
-                          
-                          <div className="flex space-x-2">
-                            {doc.status === 'required' || doc.status === 'rejected' ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Upload {doc.name}</DialogTitle>
-                                    <DialogDescription>
-                                      Please upload a clear, high-quality scan or photo of your document.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="grid gap-4 py-4">
-                                    <Label htmlFor={`file-${doc.id}`}>Select file</Label>
-                                    <Input
-                                      id={`file-${doc.id}`}
-                                      type="file"
-                                      onChange={handleFileSelect}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                      Accepted formats: PDF, JPG, PNG. Max size: 5MB
-                                    </p>
-                                  </div>
-                                  <DialogFooter>
-                                    <DialogClose asChild>
-                                      <Button variant="outline">Cancel</Button>
-                                    </DialogClose>
-                                    <Button 
-                                      onClick={() => uploadDocument(doc.id, category.id)}
-                                      disabled={!selectedFile || uploadingDocId === doc.id}
-                                    >
-                                      {uploadingDocId === doc.id ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                          Uploading...
-                                        </>
-                                      ) : (
-                                        'Upload Document'
-                                      )}
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-                            ) : (
-                              <>
-                                {doc.fileUrl && (
-                                  <Button variant="outline">
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </Button>
-                                )}
-                                <Button variant="outline">
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Replace
-                                </Button>
-                              </>
-                            )}
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(doc.status)}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleViewDocument(doc.file_url)}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              View
+                            </Button>
                           </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>No documents in this category yet.</p>
-                        <p className="text-sm mt-2">
-                          Click "Add Custom Document" to add a document to this category.
-                        </p>
+                        {doc.feedback && (
+                          <div className="bg-muted p-3 border-t">
+                            <p className="text-sm flex items-start">
+                              <span className="font-medium mr-2">Feedback:</span>
+                              {doc.feedback}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No documents uploaded yet.</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Upload your required documents to proceed with your applications.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </StudentLayout>
   );
