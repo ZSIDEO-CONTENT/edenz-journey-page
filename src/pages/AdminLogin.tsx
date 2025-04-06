@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email("Valid email is required"),
@@ -23,7 +24,7 @@ const AdminLogin = () => {
     // Check if already authenticated
     const checkAuth = async () => {
       if (await isAuthenticated()) {
-        navigate("/admin/dashboard");
+        navigate("/admin");
       }
     };
     
@@ -48,7 +49,7 @@ const AdminLogin = () => {
         description: "Welcome to the admin dashboard",
       });
       
-      navigate("/admin/dashboard");
+      navigate("/admin");
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -65,8 +66,8 @@ const AdminLogin = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
         <div className="text-center mb-6">
-          <ShieldAlert className="h-12 w-12 text-primary mx-auto mb-2" />
-          <h1 className="text-2xl font-bold">Edenz Admin Portal</h1>
+          <Shield className="h-12 w-12 text-primary mx-auto mb-2" />
+          <h1 className="text-2xl font-bold">Admin Login</h1>
           <p className="text-gray-600">Please sign in to continue</p>
         </div>
         
@@ -112,11 +113,6 @@ const AdminLogin = () => {
             </Button>
           </form>
         </Form>
-        
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>To get started, create users through the Supabase Authentication dashboard</p>
-          <p className="mt-1">Or use the default admin: admin@edenz.com / password123</p>
-        </div>
       </div>
     </div>
   );

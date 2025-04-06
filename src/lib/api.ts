@@ -265,11 +265,12 @@ export const adminLogin = async (email: string, password: string) => {
     const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({ 
+      body: new URLSearchParams({
         username: email, 
-        password: password 
+        password: password,
+        grant_type: 'password'
       }),
     });
 
@@ -298,11 +299,12 @@ export const processingLogin = async (email: string, password: string) => {
     const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({ 
+      body: new URLSearchParams({
         username: email, 
-        password: password 
+        password: password,
+        grant_type: 'password'
       }),
     });
 
@@ -331,11 +333,12 @@ export const studentLogin = async (email: string, password: string) => {
     const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({ 
+      body: new URLSearchParams({
         username: email, 
-        password: password 
+        password: password,
+        grant_type: 'password'
       }),
     });
 
