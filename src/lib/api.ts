@@ -1,4 +1,3 @@
-
 // api.ts
 
 // Student functions
@@ -174,6 +173,29 @@ export const getRequiredDocuments = async (studentId: string) => {
     return await response.json();
   } catch (error) {
     console.error("Get required documents error:", error);
+    throw error;
+  }
+};
+
+export const uploadDocument = async (formData: FormData) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/documents/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload document");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Upload document error:", error);
     throw error;
   }
 };

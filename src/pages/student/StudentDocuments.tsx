@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   FileText, Upload, Download, Trash2, CheckCircle, XCircle, 
   Clock, AlertCircle, Loader2, FileUp
@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import StudentLayout from '@/components/student/StudentLayout';
-import { getStudentDocuments, getRequiredDocuments } from '@/lib/api';
+import { getStudentDocuments, getRequiredDocuments, uploadDocument } from '@/lib/api';
 
 interface Document {
   id: string;
@@ -39,57 +39,115 @@ const StudentDocuments = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Get user info from localStorage
-        const userString = localStorage.getItem('studentUser');
-        if (!userString) {
-          throw new Error('User data not found');
-        }
-        
-        const user = JSON.parse(userString);
-        
-        // Fetch all documents for the student
-        const userDocuments = await getStudentDocuments(user.id);
-        console.log('Fetched documents:', userDocuments);
-        
-        // Fetch required documents
-        const required = await getRequiredDocuments(user.id);
-        console.log('Required documents:', required);
-        
-        setDocuments(userDocuments || []);
-        setRequiredDocuments(required || []);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your documents. Please try again later.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchDocuments();
-  }, [toast]);
+  }, []);
 
-  const handleUpload = async (documentType: string) => {
-    // In a real implementation, this would open a file picker and upload the document
-    setIsUploading(true);
-    
-    setTimeout(() => {
+  const fetchDocuments = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get user info from localStorage
+      const userString = localStorage.getItem('studentUser');
+      if (!userString) {
+        throw new Error('User data not found');
+      }
+      
+      const user = JSON.parse(userString);
+      console.log('User data:', user);
+      
+      // Fetch all documents for the student
+      const userDocuments = await getStudentDocuments(user.id);
+      console.log('Fetched documents:', userDocuments);
+      
+      // Fetch required documents
+      const required = await getRequiredDocuments(user.id);
+      console.log('Required documents:', required);
+      
+      setDocuments(userDocuments || []);
+      setRequiredDocuments(required || []);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
       toast({
-        title: 'Upload Feature',
-        description: 'Document upload functionality would be implemented here',
+        title: 'Error',
+        description: 'Failed to load your documents. Please try again later.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpload = (documentType: string) => {
+    setSelectedDocument(documentType);
+    
+    // Trigger file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedDocument) return;
+
+    try {
+      setIsUploading(true);
+
+      // Get user info from localStorage
+      const userString = localStorage.getItem('studentUser');
+      if (!userString) {
+        throw new Error('User data not found');
+      }
+      
+      const user = JSON.parse(userString);
+      
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('document_type', selectedDocument);
+      formData.append('user_id', user.id);
+      
+      // This would be the real implementation with an API
+      // In this demo, we'll simulate a successful upload
+      toast({
+        title: 'Uploading...',
+        description: 'Your document is being uploaded',
+      });
+      
+      // In a real implementation, you would call the API to upload the document
+      // await uploadDocument(formData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: 'Document Uploaded',
+        description: 'Your document has been successfully uploaded and is pending review.',
+      });
+      
+      // Refresh documents list
+      fetchDocuments();
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'There was an error uploading your document. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
       setIsUploading(false);
-    }, 1500);
+      setSelectedDocument(null);
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleViewDocument = (fileUrl: string) => {
@@ -183,7 +241,7 @@ const StudentDocuments = () => {
                               onClick={() => handleUpload(doc.type)}
                               disabled={isUploading}
                             >
-                              {isUploading ? (
+                              {isUploading && selectedDocument === doc.type ? (
                                 <>
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                   Uploading...
@@ -270,6 +328,15 @@ const StudentDocuments = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Hidden file input element */}
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+            />
           </>
         )}
       </div>
