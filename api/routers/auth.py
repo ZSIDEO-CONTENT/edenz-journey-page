@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, Request, status, Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -48,7 +47,6 @@ class AdminRegister(BaseModel):
     phone: str
     adminSecretKey: str  # Secret key to verify this is a legitimate admin registration
 
-# Helper function to create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -94,6 +92,15 @@ async def register_admin(user: AdminRegister):
         admin_secret = os.environ.get("ADMIN_SECRET_KEY", "admin123")  # Use environment variable in production
         if user.adminSecretKey != admin_secret:
             raise HTTPException(status_code=403, detail="Invalid admin secret key")
+        
+        # Check if email already exists to prevent duplicate registration
+        try:
+            user_response = supabase_client.auth.admin.get_user_by_email(user.email)
+            if user_response and hasattr(user_response, "user") and user_response.user:
+                raise HTTPException(status_code=400, detail="Email already in use")
+        except Exception as e:
+            # If user doesn't exist, this might throw an error, which is fine
+            pass
         
         # Register with Supabase Auth
         response = supabase_client.auth.sign_up({
@@ -216,23 +223,25 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         # Get user details from appropriate table based on role
         user_id = response.user.id
         
-        # Try to find user in students table
-        user_data_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
-        role = "student"
+        # Try to find user in admins table first (this ensures proper admin login priority)
+        user_data_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
+        role = "admin"
         
+        # If not found in admins, check students
+        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
+            user_data_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
+            role = "student"
+            
         # If not found in students, check processing_team
         if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
             user_data_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
             role = "processing"
-            
-        # If not found in processing_team, check admins
-        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
-            user_data_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            role = "admin"
         
         if user_data_response and hasattr(user_data_response, "data") and len(user_data_response.data) > 0:
             user_data = user_data_response.data[0]
         else:
+            # If user exists in auth but not in any role table, create a default entry
+            # This ensures we don't get login failures for users that exist in auth
             user_data = {"id": user_id, "email": response.user.email, "role": "student"}
         
         # Return token and user info
@@ -250,6 +259,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
+        print(f"Authentication error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication error: {str(e)}",
