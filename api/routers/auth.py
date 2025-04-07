@@ -41,6 +41,13 @@ class ProcessingMemberRegister(BaseModel):
     admin_token: str  # Token to verify this is created by an admin
     managed_regions: Optional[List[str]] = None
 
+class AdminRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str
+    adminSecretKey: str  # Secret key to verify this is a legitimate admin registration
+
 # Helper function to create JWT token
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -78,6 +85,40 @@ async def get_supabase_user(authorization: Optional[str] = Header(None)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication error: {str(e)}"
         )
+
+@router.post("/register/admin", status_code=status.HTTP_201_CREATED)
+async def register_admin(user: AdminRegister):
+    """Register a new admin (requires admin secret key)"""
+    try:
+        # Verify admin secret key
+        admin_secret = os.environ.get("ADMIN_SECRET_KEY", "admin123")  # Use environment variable in production
+        if user.adminSecretKey != admin_secret:
+            raise HTTPException(status_code=403, detail="Invalid admin secret key")
+        
+        # Register with Supabase Auth
+        response = supabase_client.auth.sign_up({
+            "email": user.email,
+            "password": user.password,
+        })
+        
+        if not response or not hasattr(response, "user") or not response.user:
+            raise HTTPException(status_code=400, detail="Registration failed")
+        
+        # Add additional user data to admins table
+        result = supabase_client.table("admins").insert({
+            "id": response.user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "role": "admin",
+            "created_at": datetime.now().isoformat()
+        }).execute()
+        
+        return {"success": True, "message": "Admin registered successfully"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/register/student", status_code=status.HTTP_201_CREATED)
 async def register_student(user: StudentRegister):

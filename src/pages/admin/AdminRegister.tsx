@@ -1,60 +1,55 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { adminLogin, isAuthenticated } from "@/lib/api";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Shield } from "lucide-react";
+import { registerAdmin } from "@/lib/api";
 
 const formSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Valid email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  phone: z.string().min(5, "Phone number is required"),
+  adminSecretKey: z.string().min(6, "Admin secret key is required"),
 });
 
-const AdminLogin = () => {
+const AdminRegister = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Check if already authenticated
-    const checkAuth = async () => {
-      if (await isAuthenticated()) {
-        navigate("/admin");
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
+      phone: "",
+      adminSecretKey: "",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await adminLogin(values.email, values.password);
+      await registerAdmin(values);
       
       toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard",
+        title: "Registration successful",
+        description: "You can now login as an admin",
       });
       
-      navigate("/admin");
+      navigate("/admin/login");
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Registration error:", error);
       toast({
-        title: "Login failed",
-        description: "Invalid email or password",
+        title: "Registration failed",
+        description: "Invalid admin secret key or email already in use",
         variant: "destructive",
       });
     } finally {
@@ -67,12 +62,26 @@ const AdminLogin = () => {
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
         <div className="text-center mb-6">
           <Shield className="h-12 w-12 text-primary mx-auto mb-2" />
-          <h1 className="text-2xl font-bold">Admin Login</h1>
-          <p className="text-gray-600">Please sign in to continue</p>
+          <h1 className="text-2xl font-bold">Admin Registration</h1>
+          <p className="text-gray-600">Create a new admin account</p>
         </div>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="email"
@@ -101,14 +110,42 @@ const AdminLogin = () => {
               )}
             />
             
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="+1 (123) 456-7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="adminSecretKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Admin Secret Key</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Enter admin secret key" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Registering...
                 </>
               ) : (
-                "Sign in"
+                "Register"
               )}
             </Button>
           </form>
@@ -116,13 +153,13 @@ const AdminLogin = () => {
         
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
-            Need an admin account?{" "}
+            Already have an account?{" "}
             <Button
               variant="link"
               className="p-0 h-auto"
-              onClick={() => navigate("/admin/register")}
+              onClick={() => navigate("/admin/login")}
             >
-              Register here
+              Sign in
             </Button>
           </p>
         </div>
@@ -131,4 +168,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default AdminRegister;

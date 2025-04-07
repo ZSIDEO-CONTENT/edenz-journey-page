@@ -12,6 +12,7 @@ import Contact from "./pages/Contact";
 import BookConsultation from "./pages/BookConsultation";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/AdminLogin";
+import AdminRegister from "./pages/admin/AdminRegister";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Chat from "./pages/Chat";
@@ -53,6 +54,7 @@ const App = () => (
           
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/register" element={<AdminRegister />} />
           <Route 
             path="/admin/dashboard" 
             element={

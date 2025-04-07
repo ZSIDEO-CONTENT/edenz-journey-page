@@ -294,6 +294,27 @@ export const adminLogin = async (email: string, password: string) => {
   }
 };
 
+export const registerAdmin = async (userData: any) => {
+  try {
+    const response = await fetch("http://localhost:8000/api/auth/register/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to register admin");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Admin registration error:", error);
+    throw error;
+  }
+};
+
 export const processingLogin = async (email: string, password: string) => {
   try {
     const response = await fetch("http://localhost:8000/api/auth/token", {
