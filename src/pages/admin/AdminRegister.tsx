@@ -16,7 +16,7 @@ const formSchema = z.object({
   email: z.string().email("Valid email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().min(5, "Phone number is required"),
-  adminSecretKey: z.string().min(6, "Admin secret key is required"),
+  adminSecretKey: z.string().min(1, "Admin secret key is required"),
 });
 
 const AdminRegister = () => {
@@ -37,19 +37,29 @@ const AdminRegister = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await registerAdmin(values);
+      const response = await registerAdmin(values);
       
       toast({
         title: "Registration successful",
         description: "You can now login as an admin",
       });
       
+      // Clear form and navigate after success
+      form.reset();
       navigate("/admin/login");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      
+      // More specific error message
+      const errorMessage = error.message === "Email already in use" 
+        ? "Email already registered. Please login instead."
+        : error.message === "Invalid admin secret key"
+        ? "Invalid admin secret key. Please check and try again."
+        : "Registration failed. Please try again.";
+      
       toast({
         title: "Registration failed",
-        description: "Invalid admin secret key or email already in use",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

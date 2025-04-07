@@ -275,7 +275,8 @@ export const adminLogin = async (email: string, password: string) => {
     });
 
     if (!response.ok) {
-      throw new Error("Login failed");
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Login failed");
     }
 
     const data = await response.json();
@@ -285,8 +286,10 @@ export const adminLogin = async (email: string, password: string) => {
       throw new Error("Not authorized as admin");
     }
     
+    // Save token and user data to localStorage
     localStorage.setItem("adminToken", data.access_token);
     localStorage.setItem("adminUser", JSON.stringify(data.user));
+    
     return data;
   } catch (error) {
     console.error("Admin login error:", error);
@@ -305,7 +308,14 @@ export const registerAdmin = async (userData: any) => {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to register admin");
+      const errorData = await response.json();
+      if (errorData.detail && errorData.detail.includes("duplicate key")) {
+        throw new Error("Email already in use");
+      } else if (errorData.detail && errorData.detail.includes("Invalid admin secret key")) {
+        throw new Error("Invalid admin secret key");
+      } else {
+        throw new Error(errorData.detail || "Failed to register admin");
+      }
     }
 
     return await response.json();

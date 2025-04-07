@@ -24,7 +24,7 @@ const AdminLogin = () => {
     // Check if already authenticated
     const checkAuth = async () => {
       if (await isAuthenticated()) {
-        navigate("/admin");
+        navigate("/admin/dashboard");
       }
     };
     
@@ -42,19 +42,30 @@ const AdminLogin = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await adminLogin(values.email, values.password);
+      const response = await adminLogin(values.email, values.password);
       
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard",
-      });
-      
-      navigate("/admin");
-    } catch (error) {
+      // Check if user is an admin
+      if (response.user && response.user.role === "admin") {
+        toast({
+          title: "Login successful",
+          description: "Welcome to the admin dashboard",
+        });
+        
+        navigate("/admin/dashboard");
+      } else {
+        throw new Error("Not authorized as admin");
+      }
+    } catch (error: any) {
       console.error("Login error:", error);
+      
+      // More specific error message based on the error
+      const errorMessage = error.message === "Not authorized as admin"
+        ? "This account is not an admin account"
+        : "Invalid email or password";
+      
       toast({
         title: "Login failed",
-        description: "Invalid email or password",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
