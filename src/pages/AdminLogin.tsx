@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -44,21 +43,15 @@ const AdminLogin = () => {
     try {
       const response = await adminLogin(values.email, values.password);
       
-      // Check if user is an admin
-      if (response.user && response.user.role === "admin") {
-        toast({
-          title: "Login successful",
-          description: "Welcome to the admin dashboard",
-        });
-        
-        navigate("/admin/dashboard");
-      } else {
-        throw new Error("Not authorized as admin");
-      }
+      toast({
+        title: "Login successful",
+        description: "Welcome to the admin dashboard",
+      });
+      
+      navigate("/admin/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // More specific error message based on the error
       const errorMessage = error.message === "Not authorized as admin"
         ? "This account is not an admin account"
         : "Invalid email or password";

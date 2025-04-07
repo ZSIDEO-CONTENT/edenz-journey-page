@@ -37,7 +37,7 @@ const AdminRegister = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const response = await registerAdmin(values);
+      await registerAdmin(values);
       
       toast({
         title: "Registration successful",

@@ -282,7 +282,7 @@ export const adminLogin = async (email: string, password: string) => {
     const data = await response.json();
     
     // Check if the user has admin role
-    if (data.user.role !== "admin") {
+    if (data.user && data.user.role !== "admin") {
       throw new Error("Not authorized as admin");
     }
     
@@ -309,12 +309,16 @@ export const registerAdmin = async (userData: any) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      if (errorData.detail && errorData.detail.includes("duplicate key")) {
-        throw new Error("Email already in use");
-      } else if (errorData.detail && errorData.detail.includes("Invalid admin secret key")) {
-        throw new Error("Invalid admin secret key");
+      if (errorData.detail && typeof errorData.detail === 'string') {
+        if (errorData.detail.includes("duplicate key")) {
+          throw new Error("Email already in use");
+        } else if (errorData.detail.includes("Invalid admin secret key")) {
+          throw new Error("Invalid admin secret key");
+        } else {
+          throw new Error(errorData.detail);
+        }
       } else {
-        throw new Error(errorData.detail || "Failed to register admin");
+        throw new Error("Failed to register admin");
       }
     }
 
