@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, HTTPException, Request, status, Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -102,6 +103,14 @@ async def register_admin(user: AdminRegister):
             # If user doesn't exist, this might throw an error, which is fine
             pass
         
+        # First, make sure the users table exists - we'll store all users here with a role field
+        try:
+            # Check if table exists by trying to select from it
+            supabase_client.table("users").select("id").limit(1).execute()
+        except Exception as e:
+            # If table doesn't exist, it might throw an error
+            print(f"Warning: users table may not exist yet. Error: {str(e)}")
+        
         # Register with Supabase Auth
         response = supabase_client.auth.sign_up({
             "email": user.email,
@@ -111,8 +120,8 @@ async def register_admin(user: AdminRegister):
         if not response or not hasattr(response, "user") or not response.user:
             raise HTTPException(status_code=400, detail="Registration failed")
         
-        # Add additional user data to admins table
-        result = supabase_client.table("admins").insert({
+        # Add additional user data to users table with role="admin"
+        result = supabase_client.table("users").insert({
             "id": response.user.id,
             "name": user.name,
             "email": user.email,
@@ -125,6 +134,7 @@ async def register_admin(user: AdminRegister):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
+        print(f"Admin registration error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/register/student", status_code=status.HTTP_201_CREATED)
@@ -140,8 +150,8 @@ async def register_student(user: StudentRegister):
         if not response or not hasattr(response, "user") or not response.user:
             raise HTTPException(status_code=400, detail="Registration failed")
         
-        # Add additional user data to students table
-        result = supabase_client.table("students").insert({
+        # Add additional user data to users table with role="student"
+        result = supabase_client.table("users").insert({
             "id": response.user.id,
             "name": user.name,
             "email": user.email,
@@ -154,6 +164,7 @@ async def register_student(user: StudentRegister):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
+        print(f"Student registration error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/register/processing", status_code=status.HTTP_201_CREATED)
@@ -172,8 +183,8 @@ async def register_processing_member(user: ProcessingMemberRegister):
         if not admin_user:
             raise HTTPException(status_code=403, detail="Invalid admin token")
         
-        # Check if admin user exists in admins table
-        admin_check = supabase_client.table("admins").select("*").eq("id", admin_user.id).execute()
+        # Check if admin user exists in users table with role="admin"
+        admin_check = supabase_client.table("users").select("*").eq("id", admin_user.id).eq("role", "admin").execute()
         if not admin_check or not hasattr(admin_check, "data") or len(admin_check.data) == 0:
             raise HTTPException(status_code=403, detail="Not authorized to create processing team members")
         
@@ -186,8 +197,8 @@ async def register_processing_member(user: ProcessingMemberRegister):
         if not response or not hasattr(response, "user") or not response.user:
             raise HTTPException(status_code=400, detail="Registration failed")
         
-        # Add additional user data to processing_team table
-        result = supabase_client.table("processing_team").insert({
+        # Add additional user data to users table with role="processing"
+        result = supabase_client.table("users").insert({
             "id": response.user.id,
             "name": user.name,
             "email": user.email,
@@ -202,6 +213,7 @@ async def register_processing_member(user: ProcessingMemberRegister):
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
+        print(f"Processing member registration error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/token", response_model=Token)
@@ -220,29 +232,34 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 detail="Incorrect email or password",
             )
         
-        # Get user details from appropriate table based on role
+        print(f"Authentication success for: {form_data.username}")
+        
+        # Get user details from users table based on role
         user_id = response.user.id
         
-        # Try to find user in admins table first (this ensures proper admin login priority)
-        user_data_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-        role = "admin"
-        
-        # If not found in admins, check students
-        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
-            user_data_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
-            role = "student"
-            
-        # If not found in students, check processing_team
-        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
-            user_data_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-            role = "processing"
+        # Look for user in users table
+        user_data_response = supabase_client.table("users").select("*").eq("id", user_id).execute()
         
         if user_data_response and hasattr(user_data_response, "data") and len(user_data_response.data) > 0:
             user_data = user_data_response.data[0]
+            role = user_data.get("role", "student")
         else:
-            # If user exists in auth but not in any role table, create a default entry
-            # This ensures we don't get login failures for users that exist in auth
+            # If user exists in auth but not in users table, create a default entry
             user_data = {"id": user_id, "email": response.user.email, "role": "student"}
+            role = "student"
+            
+            # Insert the default user data
+            try:
+                supabase_client.table("users").insert({
+                    "id": user_id,
+                    "email": response.user.email,
+                    "role": "student",
+                    "created_at": datetime.now().isoformat()
+                }).execute()
+            except Exception as e:
+                print(f"Error creating default user entry: {str(e)}")
+        
+        print(f"User role determined as: {role}")
         
         # Return token and user info
         return {
@@ -252,7 +269,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
                 "id": user_id,
                 "email": user_data.get("email", response.user.email),
                 "name": user_data.get("name", ""),
-                "role": user_data.get("role", role),
+                "role": role,
                 "managed_regions": user_data.get("managed_regions", []) if role == "processing" else None
             }
         }
@@ -269,30 +286,21 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: dict = Depends(get_supabase_user)):
     """Get current user profile"""
     try:
-        # Get user data from appropriate table
+        # Get user data from users table
         user_id = current_user.id
         
-        # Check students table first
-        user_response = supabase_client.table("students").select("*").eq("id", user_id).execute()
-        role = "student"
-        
-        # If not found, check processing_team table
-        if not user_response or not hasattr(user_response, "data") or len(user_response.data) == 0:
-            user_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-            role = "processing"
-        
-        # If not found, check admins table
-        if not user_response or not hasattr(user_response, "data") or len(user_response.data) == 0:
-            user_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            role = "admin"
+        # Look for user in users table
+        user_response = supabase_client.table("users").select("*").eq("id", user_id).execute()
         
         if user_response and hasattr(user_response, "data") and len(user_response.data) > 0:
             user_data = user_response.data[0]
+            role = user_data.get("role", "student")
+            
             return {
                 "id": user_id,
                 "email": user_data.get("email", current_user.email),
                 "name": user_data.get("name", ""),
-                "role": user_data.get("role", role),
+                "role": role,
                 "managed_regions": user_data.get("managed_regions", []) if role == "processing" else None
             }
         
@@ -303,4 +311,5 @@ async def read_users_me(current_user: dict = Depends(get_supabase_user)):
             "role": "student"
         }
     except Exception as e:
+        print(f"Error fetching user data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching user data: {str(e)}")
