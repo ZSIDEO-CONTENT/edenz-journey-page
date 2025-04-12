@@ -1,14 +1,12 @@
-
 from fastapi import APIRouter, HTTPException, Request, status, Depends, Header
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 from datetime import datetime
-import supabase
-from api.config import SUPABASE_URL, SUPABASE_KEY
-
-# Initialize Supabase client
-supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+import psycopg2
+import psycopg2.extras
+from api.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from api.db_utils import get_db_connection
 
 router = APIRouter(prefix="/student", tags=["student"])
 
@@ -54,51 +52,137 @@ class EducationEntry(BaseModel):
     documents: Optional[List[str]] = None
 
 
-async def get_supabase_user(authorization: Optional[str] = Header(None)):
-    """Get the current user from Supabase token"""
-    # ... keep existing code (authentication function)
+async def get_current_user(authorization: Optional[str] = Header(None)):
+    """Get the current user from JWT token"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # This function should be imported from auth.py
+    # For now, we'll use a simplified version
+    from api.routers.auth import decode_access_token
+    
+    token = authorization.replace("Bearer ", "")
+    payload = decode_access_token(token)
+    
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Get user from database
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    
+    cur.execute("SELECT * FROM users WHERE id = %s", (payload.get("sub"),))
+    user = cur.fetchone()
+    
+    cur.close()
+    conn.close()
+    
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return dict(user)
 
 
 @router.get("/profile/{student_id}")
-async def get_student_profile(student_id: str, current_user: dict = Depends(get_supabase_user)):
+async def get_student_profile(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get a student's profile"""
-    # ... keep existing code (get profile function)
+    try:
+        # Verify user is viewing their own profile or is an admin
+        if student_id != str(current_user["id"]):
+            # Check if user is admin
+            if current_user["role"] != "admin":
+                raise HTTPException(status_code=403, detail="Not authorized to view this profile")
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get student profile from users table
+        cur.execute("""
+            SELECT id, name, email, phone, 
+                address, dob, bio, profile_picture, 
+                preferred_country, education_level, funding_source, 
+                budget, travel_history, visa_rejections, 
+                family_abroad, is_first_time_consultation, 
+                consultation_goals, created_at, role
+            FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
+        
+        student = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        return dict(student)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/profile/{student_id}")
-async def update_student_profile(student_id: str, profile: StudentProfile, current_user: dict = Depends(get_supabase_user)):
+async def update_student_profile(student_id: str, profile: StudentProfile, current_user: dict = Depends(get_current_user)):
     """Update a student's profile"""
     try:
-        # Verify user is updating their own profile
-        if student_id != current_user.id:
+        # Verify user is updating their own profile or is an admin
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to update this profile")
         
-        response = supabase_client.table("students").update({
-            "name": profile.name,
-            "email": profile.email,
-            "phone": profile.phone,
-            "address": profile.address,
-            "dob": profile.dob,
-            "bio": profile.bio,
-            "profile_picture": profile.profile_picture,
-            "preferred_country": profile.preferred_country,
-            "education_level": profile.education_level,
-            "funding_source": profile.funding_source,
-            "budget": profile.budget,
-            "travel_history": profile.travel_history,
-            "visa_rejections": profile.visa_rejections,
-            "family_abroad": profile.family_abroad,
-            "is_first_time_consultation": profile.is_first_time_consultation,
-            "consultation_goals": profile.consultation_goals,
-            "updated_at": datetime.now().isoformat()
-        }).eq("id", student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not response or not hasattr(response, "data") or len(response.data) == 0:
+        # Update student profile
+        cur.execute("""
+            UPDATE users
+            SET name = %s, email = %s, phone = %s,
+                address = %s, dob = %s, bio = %s,
+                profile_picture = %s, preferred_country = %s,
+                education_level = %s, funding_source = %s,
+                budget = %s, travel_history = %s,
+                visa_rejections = %s, family_abroad = %s,
+                is_first_time_consultation = %s, consultation_goals = %s
+            WHERE id = %s AND role = 'student'
+            RETURNING id
+        """, (
+            profile.name,
+            profile.email,
+            profile.phone,
+            profile.address,
+            profile.dob,
+            profile.bio,
+            profile.profile_picture,
+            profile.preferred_country,
+            profile.education_level,
+            profile.funding_source,
+            profile.budget,
+            profile.travel_history,
+            profile.visa_rejections,
+            profile.family_abroad,
+            profile.is_first_time_consultation,
+            profile.consultation_goals,
+            student_id
+        ))
+        
+        updated = cur.fetchone()
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        if not updated:
             raise HTTPException(status_code=404, detail="Student not found")
         
         return {"success": True, "message": "Profile updated successfully"}
@@ -109,46 +193,88 @@ async def update_student_profile(student_id: str, profile: StudentProfile, curre
 
 
 @router.get("/education/{student_id}")
-async def get_student_education(student_id: str, current_user: dict = Depends(get_supabase_user)):
+async def get_student_education(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get education history for a student"""
-    # ... keep existing code (get education function)
+    try:
+        # Verify user is viewing their own education or is an admin
+        if student_id != str(current_user["id"]):
+            # Check if user is admin
+            if current_user["role"] != "admin":
+                raise HTTPException(status_code=403, detail="Not authorized to view this profile")
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get student education from education table
+        cur.execute("""
+            SELECT id, student_id, degree, institution, 
+                year_completed, gpa, country, major, 
+                start_date, end_date, documents, created_at
+            FROM education
+            WHERE student_id = %s
+            ORDER BY created_at DESC
+        """, (student_id,))
+        
+        education_entries = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # Convert to list of dictionaries
+        result = [dict(entry) for entry in education_entries]
+        
+        return result
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/education")
 async def add_education(
     education: EducationEntry,
     student_id: str,
-    current_user: dict = Depends(get_supabase_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Add education entry for a student"""
     try:
-        # Verify user is adding to their own profile
-        if student_id != current_user.id:
+        # Verify user is adding to their own profile or is an admin
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to update this profile")
         
-        result = supabase_client.table("education").insert({
-            "student_id": student_id,
-            "degree": education.degree,
-            "institution": education.institution,
-            "year_completed": education.year_completed,
-            "gpa": education.gpa,
-            "country": education.country,
-            "major": education.major,
-            "start_date": education.start_date,
-            "end_date": education.end_date,
-            "documents": education.documents,
-            "created_at": datetime.now().isoformat()
-        }).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
-            raise HTTPException(status_code=500, detail="Failed to add education")
+        # Insert education entry
+        cur.execute("""
+            INSERT INTO education (
+                student_id, degree, institution, year_completed,
+                gpa, country, major, start_date, end_date, documents
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            ) RETURNING id
+        """, (
+            student_id,
+            education.degree,
+            education.institution,
+            education.year_completed,
+            education.gpa,
+            education.country,
+            education.major,
+            education.start_date,
+            education.end_date,
+            education.documents
+        ))
         
-        return {"success": True, "message": "Education added successfully", "id": result.data[0]["id"]}
+        new_id = cur.fetchone()[0]
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {"success": True, "message": "Education added successfully", "id": new_id}
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -156,43 +282,147 @@ async def add_education(
 
 
 @router.get("/applications/{student_id}")
-async def get_student_applications(student_id: str, current_user: dict = Depends(get_supabase_user)):
+async def get_student_applications(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get applications for a student"""
-    # ... keep existing code (get applications function)
+    try:
+        # Verify user is viewing their own applications or is an admin/processing
+        if student_id != str(current_user["id"]):
+            # Check if user is admin or processing
+            if current_user["role"] not in ["admin", "processing"]:
+                raise HTTPException(status_code=403, detail="Not authorized to view these applications")
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Get applications from applications table
+        cur.execute("""
+            SELECT id, student_id, university_name, program_name, 
+                status, progress, created_at, updated_at
+            FROM applications
+            WHERE student_id = %s
+            ORDER BY updated_at DESC
+        """, (student_id,))
+        
+        applications = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # Convert to list of dictionaries
+        result = [dict(app) for app in applications]
+        
+        return result
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/onboarding-steps/{student_id}")
-async def get_onboarding_steps(student_id: str, current_user: dict = Depends(get_supabase_user)):
+async def get_onboarding_steps(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get onboarding steps for a new student"""
     try:
-        # Verify user is fetching their own onboarding steps
-        if student_id != current_user.id:
+        # Verify user is fetching their own onboarding steps or is an admin
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to view these onboarding steps")
         
-        # Get student profile
-        student_response = supabase_client.table("students").select("*").eq("id", student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        # Get student profile
+        cur.execute("""
+            SELECT id, name, email, phone, address, dob
+            FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
+        
+        student = cur.fetchone()
+        
+        if not student:
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        
         # Get education history
-        education_response = supabase_client.table("education").select("*").eq("student_id", student_id).execute()
-        has_education = education_response and hasattr(education_response, "data") and len(education_response.data) > 0
+        cur.execute("""
+            SELECT COUNT(*) as count
+            FROM education
+            WHERE student_id = %s
+        """, (student_id,))
         
-        # Get required documents
-        documents_response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
-        documents = documents_response.data if hasattr(documents_response, "data") else []
+        education_count = cur.fetchone()["count"]
+        has_education = education_count > 0
+        
+        # Get documents
+        cur.execute("""
+            SELECT id, document_type as type, file_path, status
+            FROM documents
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        documents = cur.fetchall()
+        
+        # Get questionnaire completion status (if table exists)
+        try:
+            cur.execute("""
+                SELECT id 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaires'
+            """)
+            has_questionnaires_table = cur.fetchone() is not None
+            
+            has_questionnaire = False
+            missing_questionnaires = []
+            
+            if has_questionnaires_table:
+                # Get required questionnaires
+                cur.execute("""
+                    SELECT id, title 
+                    FROM questionnaires 
+                    WHERE is_required = TRUE
+                """)
+                required_questionnaires = cur.fetchall()
+                
+                # Get completed questionnaire IDs
+                cur.execute("""
+                    SELECT DISTINCT questionnaire_id 
+                    FROM questionnaire_responses 
+                    WHERE student_id = %s
+                """, (student_id,))
+                completed_questionnaire_ids = [row["questionnaire_id"] for row in cur.fetchall()]
+                
+                # Check if all required questionnaires are completed
+                all_completed = True
+                for q in required_questionnaires:
+                    if q["id"] not in completed_questionnaire_ids:
+                        all_completed = False
+                        missing_questionnaires.append({"id": q["id"], "title": q["title"]})
+                
+                has_questionnaire = all_completed
+        except Exception as e:
+            print(f"Error getting questionnaire status: {str(e)}")
+            has_questionnaire = False
+            missing_questionnaires = []
+        
+        # Get consultation booking status (if table exists)
+        try:
+            cur.execute("""
+                SELECT COUNT(*) as count 
+                FROM consultations 
+                WHERE student_id = %s
+            """, (student_id,))
+            has_consultation = cur.fetchone()["count"] > 0
+        except Exception as e:
+            print(f"Error checking consultation status: {str(e)}")
+            has_consultation = False
+        
+        cur.close()
+        conn.close()
         
         # Define required document types
         required_doc_types = ["passport", "academic_transcript", "cv_resume"]
-        submitted_doc_types = set(doc["type"] for doc in documents)
+        submitted_doc_types = [doc["type"] for doc in documents] if documents else []
         missing_docs = [doc_type for doc_type in required_doc_types if doc_type not in submitted_doc_types]
         
         # Define onboarding steps
@@ -226,49 +456,20 @@ async def get_onboarding_steps(student_id: str, current_user: dict = Depends(get
                 "id": "questionnaire",
                 "title": "Complete Questionnaires",
                 "description": "Answer questions about your study goals and preferences",
-                "completed": False,  # Will be calculated from the questionnaires endpoint
+                "completed": has_questionnaire,
                 "required": True,
+                "missing": missing_questionnaires if missing_questionnaires else None,
                 "link": "/student/questionnaires"
             },
             {
                 "id": "consultation",
                 "title": "Book a Consultation",
                 "description": "Schedule a meeting with our education consultant",
-                "completed": False,  # This will be determined by existing consultations
+                "completed": has_consultation,
                 "required": True,
                 "link": "/student/consultations"
             }
         ]
-        
-        # Get questionnaire completion status
-        try:
-            questionnaires_response = supabase_client.table("questionnaires").select("*").eq("is_required", True).execute()
-            required_questionnaires = questionnaires_response.data if hasattr(questionnaires_response, "data") else []
-            
-            responses_response = supabase_client.table("questionnaire_responses").select("questionnaire_id").eq("student_id", student_id).execute()
-            completed_questionnaire_ids = []
-            if responses_response and hasattr(responses_response, "data"):
-                completed_questionnaire_ids = [response["questionnaire_id"] for response in responses_response.data]
-            
-            questionnaire_step = next((step for step in steps if step["id"] == "questionnaire"), None)
-            if questionnaire_step:
-                missing_questionnaires = [q for q in required_questionnaires if q["id"] not in completed_questionnaire_ids]
-                questionnaire_step["completed"] = len(missing_questionnaires) == 0
-                if missing_questionnaires:
-                    questionnaire_step["missing"] = [{"id": q["id"], "title": q["title"]} for q in missing_questionnaires]
-        except Exception as e:
-            print(f"Error getting questionnaire status: {str(e)}")
-        
-        # Check if consultation is booked
-        try:
-            consultation_response = supabase_client.table("consultations").select("*").eq("student_id", student_id).execute()
-            has_consultation = consultation_response and hasattr(consultation_response, "data") and len(consultation_response.data) > 0
-            
-            consultation_step = next((step for step in steps if step["id"] == "consultation"), None)
-            if consultation_step:
-                consultation_step["completed"] = has_consultation
-        except Exception as e:
-            print(f"Error checking consultation status: {str(e)}")
         
         # Calculate progress percentage
         completed_required_steps = sum(1 for step in steps if step["completed"] and step["required"])
@@ -287,30 +488,44 @@ async def get_onboarding_steps(student_id: str, current_user: dict = Depends(get
 
 
 @router.get("/guide/{destination_country}")
-async def get_destination_guide(destination_country: str, current_user: dict = Depends(get_supabase_user)):
+async def get_destination_guide(destination_country: str, current_user: dict = Depends(get_current_user)):
     """Get application guide for a specific destination country"""
     try:
-        # Get the guide information from the database
-        guide_response = supabase_client.table("destination_guides").select("*").eq("country_code", destination_country.lower()).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not guide_response or not hasattr(guide_response, "data") or len(guide_response.data) == 0:
+        # Get the guide information from the database
+        cur.execute("""
+            SELECT * 
+            FROM destination_guides 
+            WHERE country_code = %s
+        """, (destination_country.lower(),))
+        
+        guide = cur.fetchone()
+        
+        if not guide:
             raise HTTPException(status_code=404, detail=f"Guide for {destination_country} not found")
         
-        guide = guide_response.data[0]
-        
         # Get required documents for this destination
-        doc_response = supabase_client.table("destination_documents").select("*").eq("country_code", destination_country.lower()).execute()
+        cur.execute("""
+            SELECT * 
+            FROM destination_documents 
+            WHERE country_code = %s
+        """, (destination_country.lower(),))
         
-        required_documents = []
-        if doc_response and hasattr(doc_response, "data"):
-            required_documents = doc_response.data
+        required_documents = cur.fetchall()
         
         # Get frequently asked questions for this destination
-        faq_response = supabase_client.table("destination_faqs").select("*").eq("country_code", destination_country.lower()).execute()
+        cur.execute("""
+            SELECT * 
+            FROM destination_faqs 
+            WHERE country_code = %s
+        """, (destination_country.lower(),))
         
-        faqs = []
-        if faq_response and hasattr(faq_response, "data"):
-            faqs = faq_response.data
+        faqs = cur.fetchall()
+        
+        cur.close()
+        conn.close()
         
         return {
             "country": guide["country_name"],
@@ -322,8 +537,8 @@ async def get_destination_guide(destination_country: str, current_user: dict = D
             "scholarships": guide["scholarships"],
             "work_opportunities": guide["work_opportunities"],
             "accommodation": guide["accommodation"],
-            "required_documents": required_documents,
-            "faqs": faqs,
+            "required_documents": [dict(doc) for doc in required_documents],
+            "faqs": [dict(faq) for faq in faqs],
             "updated_at": guide["updated_at"]
         }
     except Exception as e:
@@ -333,28 +548,38 @@ async def get_destination_guide(destination_country: str, current_user: dict = D
 
 
 @router.post("/subscription-status/{student_id}")
-async def check_subscription_status(student_id: str, current_user: dict = Depends(get_supabase_user)):
+async def check_subscription_status(student_id: str, current_user: dict = Depends(get_current_user)):
     """Check if a student has an active subscription package"""
     try:
-        # Verify user is checking their own subscription
-        if student_id != current_user.id:
+        # Verify user is checking their own subscription or is an admin
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to check this subscription")
         
-        # Get student subscriptions
-        subscription_response = supabase_client.table("student_subscriptions").select("*").eq("student_id", student_id).order("created_at", {"ascending": False}).limit(1).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not subscription_response or not hasattr(subscription_response, "data") or len(subscription_response.data) == 0:
+        # Get student subscriptions
+        cur.execute("""
+            SELECT * 
+            FROM student_subscriptions 
+            WHERE student_id = %s 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """, (student_id,))
+        
+        subscription = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not subscription:
             return {
                 "has_subscription": False,
                 "subscription": None
             }
         
-        subscription = subscription_response.data[0]
         current_date = datetime.now().isoformat()
         
         # Check if subscription is still valid
