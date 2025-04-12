@@ -4,8 +4,13 @@
 // API base URL
 const API_BASE_URL = "http://localhost:8000/api";
 
+// Define proper types for fetch options
+interface FetchOptions extends RequestInit {
+  headers?: Record<string, string>;
+}
+
 // Helper function for API requests
-const fetchAPI = async (endpoint: string, options = {}) => {
+const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
