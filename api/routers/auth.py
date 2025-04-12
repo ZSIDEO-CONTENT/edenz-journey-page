@@ -209,37 +209,57 @@ async def register_processing_member(user: ProcessingMemberRegister):
         # Verify admin token
         admin_user = None
         try:
+            print(f"Verifying admin token for processing member registration")
             admin_token = user.admin_token
             admin_user_response = supabase_client.auth.get_user(admin_token)
-            admin_user = admin_user_response.user if admin_user_response else None
+            
+            if not admin_user_response or not admin_user_response.user:
+                raise HTTPException(status_code=403, detail="Invalid admin token")
+            
+            admin_user = admin_user_response.user
+            admin_id = admin_user.id
+            
+            print(f"Admin user found with ID: {admin_id}")
+            
+            # Check if admin user exists in users table with role="admin"
+            admin_data = supabase_client.table("users").select("*").eq("id", admin_id).execute()
+            
+            if not admin_data or not hasattr(admin_data, "data") or len(admin_data.data) == 0:
+                raise HTTPException(status_code=403, detail="Admin user not found in users table")
+            
+            # Check if the user has admin role
+            if admin_data.data[0].get("role") != "admin":
+                print(f"User does not have admin role: {admin_data.data[0].get('role')}")
+                raise HTTPException(status_code=403, detail="Not authorized as admin")
+            
         except Exception as e:
-            raise HTTPException(status_code=403, detail="Invalid admin token")
-        
-        if not admin_user:
-            raise HTTPException(status_code=403, detail="Invalid admin token")
-        
-        # Check if admin user exists in users table with role="admin"
-        admin_check = supabase_client.table("users").select("*").eq("id", admin_user.id).eq("role", "admin").execute()
-        if not admin_check or not hasattr(admin_check, "data") or len(admin_check.data) == 0:
-            raise HTTPException(status_code=403, detail="Not authorized to create processing team members")
+            print(f"Admin verification error: {str(e)}")
+            raise HTTPException(status_code=403, detail=f"Admin verification failed: {str(e)}")
         
         # Check if email already exists
         try:
+            print(f"Checking if email {user.email} already exists")
             user_data_response = supabase_client.table("users").select("*").eq("email", user.email).execute()
             if user_data_response and hasattr(user_data_response, "data") and len(user_data_response.data) > 0:
                 raise HTTPException(status_code=400, detail="Email already in use")
+        except HTTPException as e:
+            raise e
         except Exception as e:
             print(f"Error checking for existing processing member: {str(e)}")
             # Continue if it's just that the user doesn't exist
         
         # Register with Supabase Auth
+        print(f"Registering processing member with Supabase Auth: {user.email}")
         auth_response = supabase_client.auth.sign_up({
             "email": user.email,
             "password": user.password,
         })
         
-        if not auth_response or not hasattr(auth_response, "user") or not auth_response.user:
+        if not auth_response or not auth_response.user:
+            print("Auth registration failed, no user returned")
             raise HTTPException(status_code=400, detail="Registration failed in auth service")
+        
+        print(f"Auth registration successful, user ID: {auth_response.user.id}")
         
         # Add user data to the users table
         user_data = {

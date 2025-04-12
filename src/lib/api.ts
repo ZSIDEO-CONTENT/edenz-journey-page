@@ -1,3 +1,4 @@
+
 // api.ts
 
 // Student functions
@@ -593,18 +594,29 @@ export const updateConsultationStatus = async (consultationId: string, status: s
 export const registerProcessingMember = async (userData: any) => {
   const token = localStorage.getItem("adminToken");
   
+  if (!token) {
+    throw new Error("Admin authentication required");
+  }
+  
   try {
+    console.log("Registering processing team member:", userData);
+    
     const response = await fetch("http://localhost:8000/api/auth/processing/register", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({
+        ...userData,
+        admin_token: token,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to register processing team member");
+      const errorData = await response.json();
+      console.error("Registration failed:", response.status, errorData);
+      throw new Error(errorData.detail || "Failed to register processing team member");
     }
 
     return await response.json();
