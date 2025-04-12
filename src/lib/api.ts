@@ -245,23 +245,76 @@ export const getStudentOnboardingSteps = async (studentId: string) => {
 };
 
 // Authentication functions
-export const isAuthenticated = () => {
+export const isAuthenticated = async () => {
   const token = localStorage.getItem("adminToken");
-  return !!token;
+  if (!token) return false;
+  
+  try {
+    // Validate the token with the backend
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    return data && data.role === "admin";
+  } catch (error) {
+    console.error("Auth check error:", error);
+    return false;
+  }
 };
 
-export const isStudentAuthenticated = () => {
+export const isStudentAuthenticated = async () => {
   const token = localStorage.getItem("studentToken");
-  return !!token;
+  if (!token) return false;
+  
+  try {
+    // Validate the token with the backend
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    return data && data.role === "student";
+  } catch (error) {
+    console.error("Student auth check error:", error);
+    return false;
+  }
 };
 
-export const isProcessingAuthenticated = () => {
+export const isProcessingAuthenticated = async () => {
   const token = localStorage.getItem("processingToken");
-  return !!token;
+  if (!token) return false;
+  
+  try {
+    // Validate the token with the backend
+    const response = await fetch("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    return data && data.role === "processing";
+  } catch (error) {
+    console.error("Processing auth check error:", error);
+    return false;
+  }
 };
 
 export const adminLogin = async (email: string, password: string) => {
   try {
+    console.log("Attempting admin login for:", email);
+    
     const response = await fetch("http://localhost:8000/api/auth/token", {
       method: "POST",
       headers: {
@@ -276,13 +329,16 @@ export const adminLogin = async (email: string, password: string) => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("Admin login failed:", errorData);
       throw new Error(errorData.detail || "Login failed");
     }
 
     const data = await response.json();
+    console.log("Login response:", data);
     
     // Check if the user has admin role
-    if (data.user && data.user.role !== "admin") {
+    if (!data.user || data.user.role !== "admin") {
+      console.error("Not authorized as admin. User role:", data.user?.role);
       throw new Error("Not authorized as admin");
     }
     

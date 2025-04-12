@@ -49,6 +49,12 @@ const StudentRegister = () => {
     setIsLoading(true);
     
     try {
+      console.log("Sending student registration request with data:", {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+      });
+      
       // Send registration request to the actual API endpoint
       const response = await fetch('http://localhost:8000/api/auth/register/student', {
         method: 'POST',
@@ -66,8 +72,11 @@ const StudentRegister = () => {
       const data = await response.json();
       
       if (!response.ok) {
+        console.error("Registration failed with status:", response.status, data);
         throw new Error(data.detail || 'Registration failed');
       }
+      
+      console.log("Registration successful:", data);
       
       toast({
         title: 'Registration successful',
@@ -78,6 +87,7 @@ const StudentRegister = () => {
       navigate('/student/login');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      console.error("Registration error:", errorMessage);
       
       toast({
         title: 'Registration failed',
