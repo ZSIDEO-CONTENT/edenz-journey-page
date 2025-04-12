@@ -202,7 +202,7 @@ async def register_student(user: StudentRegister):
         print(f"Student registration error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/register/processing", status_code=status.HTTP_201_CREATED)
+@router.post("/processing/register", status_code=status.HTTP_201_CREATED)
 async def register_processing_member(user: ProcessingMemberRegister):
     """Register a new processing team member (admin only)"""
     try:
