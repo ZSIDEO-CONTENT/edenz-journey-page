@@ -1,13 +1,15 @@
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Header
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 import uuid
 from datetime import datetime
-import supabase
+import psycopg2
+import psycopg2.extras
 from crewai import Agent, Task, Crew, Process
 from langchain.chat_models import ChatOpenAI
+from api.db_utils import get_db_connection
 
 # Load environment variables
 os.environ["OPENAI_API_KEY"] = "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"
@@ -19,11 +21,6 @@ llm = ChatOpenAI(
     openai_api_key="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",
     openai_api_base="https://openrouter.ai/api/v1"
 )
-
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
-supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
-supabase_client = supabase.create_client(supabase_url, supabase_key)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -59,14 +56,31 @@ edenz_agent = Agent(
 )
 
 def save_chat_message(message: str, sender: str, session_id: str) -> bool:
-    """Save chat message to Supabase database"""
+    """Save chat message to PostgreSQL database"""
     try:
-        result = supabase_client.table("chat_history").insert({
-            "content": message,
-            "sender": sender,
-            "session_id": session_id,
-            "timestamp": datetime.now().isoformat()
-        }).execute()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Check if chat_history table exists and create if it doesn't
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id SERIAL PRIMARY KEY,
+                content TEXT NOT NULL,
+                sender VARCHAR(50) NOT NULL,
+                session_id VARCHAR(100) NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Insert the chat message
+        cur.execute("""
+            INSERT INTO chat_history (content, sender, session_id, timestamp)
+            VALUES (%s, %s, %s, %s)
+        """, (message, sender, session_id, datetime.now()))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return True
     except Exception as e:
@@ -74,13 +88,50 @@ def save_chat_message(message: str, sender: str, session_id: str) -> bool:
         return False
 
 def get_chat_history(session_id: str) -> List[Dict[str, Any]]:
-    """Retrieve chat history for a session from Supabase database"""
+    """Retrieve chat history for a session from PostgreSQL database"""
     try:
-        result = supabase_client.table("chat_history").select("*").eq("session_id", session_id).order("timestamp").execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if result and hasattr(result, "data"):
-            return result.data
-        return []
+        # Check if chat_history table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'chat_history'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            cur.execute("""
+                CREATE TABLE chat_history (
+                    id SERIAL PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    sender VARCHAR(50) NOT NULL,
+                    session_id VARCHAR(100) NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
+            return []
+        
+        # Fetch chat history
+        cur.execute("""
+            SELECT * FROM chat_history
+            WHERE session_id = %s
+            ORDER BY timestamp
+        """, (session_id,))
+        
+        history = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return [dict(row) for row in history]
     except Exception as e:
         print(f"Error retrieving chat history: {str(e)}")
         return []

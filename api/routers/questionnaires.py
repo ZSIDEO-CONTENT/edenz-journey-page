@@ -4,20 +4,17 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 from datetime import datetime
-import supabase
-from api.config import SUPABASE_URL, SUPABASE_KEY
-
-# Initialize Supabase client
-supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+import psycopg2
+import psycopg2.extras
+from api.db_utils import get_db_connection
+from api.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 router = APIRouter(prefix="/questionnaires", tags=["questionnaires"])
-
 
 class QuestionnaireResponse(BaseModel):
     student_id: str
     questionnaire_id: str
     responses: Dict[str, Any]
-
 
 class Questionnaire(BaseModel):
     id: Optional[str] = None
@@ -29,9 +26,8 @@ class Questionnaire(BaseModel):
     education_level: Optional[str] = None
     created_at: Optional[datetime] = None
 
-
 async def get_supabase_user(authorization: Optional[str] = Header(None)):
-    """Get the current user from Supabase token"""
+    """Get the current user from JWT token"""
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,155 +38,384 @@ async def get_supabase_user(authorization: Optional[str] = Header(None)):
         # Extract the token from the Authorization header
         token = authorization.replace("Bearer ", "")
         
-        # Verify token with Supabase
-        response = supabase_client.auth.get_user(token)
-        if not response or not hasattr(response, "user"):
+        # Verify token (simplified for now, should use proper JWT verification)
+        # In a real implementation, you would verify the token and get the user ID
+        from api.routers.auth import decode_access_token
+        
+        payload = decode_access_token(token)
+        if not payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
         
-        return response.user
+        user_id = payload.get('sub')
+        
+        # Get user from database
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        cur.execute("""
+            SELECT * FROM users WHERE id = %s
+        """, (user_id,))
+        
+        user = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        return dict(user)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication error: {str(e)}"
         )
 
-
 @router.get("")
 async def get_all_questionnaires(current_user: dict = Depends(get_supabase_user)):
     """Get all questionnaires available to the student"""
     try:
-        # Get system questionnaires (available to all students)
-        response = supabase_client.table("questionnaires").select("*").execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not response or not hasattr(response, "data"):
+        # Check if questionnaires table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaires'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create questionnaires table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE questionnaires (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    questions JSONB NOT NULL,
+                    is_required BOOLEAN DEFAULT TRUE,
+                    destination_country VARCHAR(100),
+                    education_level VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
             return []
         
-        return response.data
+        # Get system questionnaires (available to all students)
+        cur.execute("""
+            SELECT * FROM questionnaires
+        """)
+        
+        questionnaires = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return [dict(q) for q in questionnaires] if questionnaires else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/student/{student_id}")
 async def get_student_questionnaire_responses(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Get all questionnaire responses for a student"""
     try:
         # Verify user is fetching their own responses
-        if student_id != current_user.id:
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to view these responses")
         
-        response = supabase_client.table("questionnaire_responses").select("*").eq("student_id", student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not response or not hasattr(response, "data"):
+        # Check if questionnaire_responses table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaire_responses'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create questionnaire_responses table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE questionnaire_responses (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    questionnaire_id INTEGER NOT NULL,
+                    responses JSONB NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (questionnaire_id) REFERENCES questionnaires(id) ON DELETE CASCADE
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
             return []
         
-        return response.data
+        # Get student's questionnaire responses
+        cur.execute("""
+            SELECT * FROM questionnaire_responses
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        responses = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return [dict(resp) for resp in responses] if responses else []
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.post("/respond")
 async def submit_questionnaire_response(response_data: QuestionnaireResponse, current_user: dict = Depends(get_supabase_user)):
     """Submit responses to a questionnaire"""
     try:
         # Verify user is submitting their own responses
-        if response_data.student_id != current_user.id:
+        if response_data.student_id != str(current_user["id"]):
             raise HTTPException(status_code=403, detail="Not authorized to submit for this user")
         
-        # Check if questionnaire exists
-        questionnaire = supabase_client.table("questionnaires").select("*").eq("id", response_data.questionnaire_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not questionnaire or not hasattr(questionnaire, "data") or len(questionnaire.data) == 0:
+        # Check if questionnaires table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaires'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Create questionnaires table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE questionnaires (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    questions JSONB NOT NULL,
+                    is_required BOOLEAN DEFAULT TRUE,
+                    destination_country VARCHAR(100),
+                    education_level VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+        
+        # Check if questionnaire_responses table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaire_responses'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Create questionnaire_responses table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE questionnaire_responses (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    questionnaire_id INTEGER NOT NULL,
+                    responses JSONB NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (questionnaire_id) REFERENCES questionnaires(id) ON DELETE CASCADE
+                )
+            """)
+            conn.commit()
+        
+        # Check if questionnaire exists
+        cur.execute("""
+            SELECT * FROM questionnaires
+            WHERE id = %s
+        """, (response_data.questionnaire_id,))
+        
+        questionnaire = cur.fetchone()
+        
+        if not questionnaire:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Questionnaire not found")
         
         # Check if student has already responded to this questionnaire
-        existing_response = supabase_client.table("questionnaire_responses").select("*").eq("student_id", response_data.student_id).eq("questionnaire_id", response_data.questionnaire_id).execute()
+        cur.execute("""
+            SELECT * FROM questionnaire_responses
+            WHERE student_id = %s AND questionnaire_id = %s
+        """, (response_data.student_id, response_data.questionnaire_id))
         
-        if existing_response and hasattr(existing_response, "data") and len(existing_response.data) > 0:
+        existing_response = cur.fetchone()
+        
+        if existing_response:
             # Update existing response
-            result = supabase_client.table("questionnaire_responses").update({
-                "responses": response_data.responses,
-                "updated_at": datetime.now().isoformat()
-            }).eq("student_id", response_data.student_id).eq("questionnaire_id", response_data.questionnaire_id).execute()
+            cur.execute("""
+                UPDATE questionnaire_responses
+                SET responses = %s, updated_at = %s
+                WHERE student_id = %s AND questionnaire_id = %s
+                RETURNING id
+            """, (
+                psycopg2.extras.Json(response_data.responses),
+                datetime.now(),
+                response_data.student_id,
+                response_data.questionnaire_id
+            ))
         else:
             # Create new response
-            result = supabase_client.table("questionnaire_responses").insert({
-                "student_id": response_data.student_id,
-                "questionnaire_id": response_data.questionnaire_id,
-                "responses": response_data.responses,
-                "created_at": datetime.now().isoformat()
-            }).execute()
+            cur.execute("""
+                INSERT INTO questionnaire_responses (
+                    student_id, questionnaire_id, responses, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                response_data.student_id,
+                response_data.questionnaire_id,
+                psycopg2.extras.Json(response_data.responses),
+                datetime.now(),
+                datetime.now()
+            ))
         
-        if result and hasattr(result, "data") and len(result.data) > 0:
-            return {"success": True, "message": "Questionnaire response submitted successfully"}
+        response_id = cur.fetchone()[0]
         
-        raise HTTPException(status_code=500, detail="Failed to submit questionnaire response")
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return {"success": True, "message": "Questionnaire response submitted successfully"}
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/required/{student_id}")
 async def get_required_questionnaires(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Get all required questionnaires for a student that they haven't completed yet"""
     try:
         # Verify user is fetching their own required questionnaires
-        if student_id != current_user.id:
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to view these questionnaires")
         
-        # Get student profile to check preferred country and education level
-        student_response = supabase_client.table("students").select("*").eq("id", student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        # Get student profile to check preferred country and education level
+        cur.execute("""
+            SELECT * FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
+        
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        preferred_country = student.get("preferred_country")
-        education_level = student.get("education_level")
+        student_dict = dict(student)
+        preferred_country = student_dict.get("preferred_country")
+        education_level = student_dict.get("education_level")
         
-        # Get all required questionnaires
-        questionnaires_response = supabase_client.table("questionnaires").select("*").eq("is_required", True).execute()
+        # Check if questionnaires table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaires'
+            )
+        """)
         
-        if not questionnaires_response or not hasattr(questionnaires_response, "data"):
+        if not cur.fetchone()[0]:
+            # Create questionnaires table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE questionnaires (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    questions JSONB NOT NULL,
+                    is_required BOOLEAN DEFAULT TRUE,
+                    destination_country VARCHAR(100),
+                    education_level VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
             return []
         
-        questionnaires = questionnaires_response.data
+        # Get all required questionnaires
+        cur.execute("""
+            SELECT * FROM questionnaires
+            WHERE is_required = TRUE
+        """)
         
-        # Get all questionnaires already completed by the student
-        completed_response = supabase_client.table("questionnaire_responses").select("questionnaire_id").eq("student_id", student_id).execute()
+        questionnaires = cur.fetchall()
+        
+        # Check if questionnaire_responses table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaire_responses'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
         
         completed_questionnaire_ids = []
-        if completed_response and hasattr(completed_response, "data"):
-            completed_questionnaire_ids = [response["questionnaire_id"] for response in completed_response.data]
+        if table_exists:
+            # Get all questionnaires already completed by the student
+            cur.execute("""
+                SELECT questionnaire_id FROM questionnaire_responses
+                WHERE student_id = %s
+            """, (student_id,))
+            
+            responses = cur.fetchall()
+            completed_questionnaire_ids = [str(response["questionnaire_id"]) for response in responses] if responses else []
+        
+        cur.close()
+        conn.close()
         
         # Filter questionnaires that are required for this student and not completed yet
         required_questionnaires = []
         for questionnaire in questionnaires:
+            questionnaire_dict = dict(questionnaire)
             # Skip if already completed
-            if questionnaire["id"] in completed_questionnaire_ids:
+            if str(questionnaire_dict["id"]) in completed_questionnaire_ids:
                 continue
             
             # Check if questionnaire is applicable to student's preferred country and education level
-            country_match = not questionnaire.get("destination_country") or questionnaire.get("destination_country") == preferred_country
-            education_match = not questionnaire.get("education_level") or questionnaire.get("education_level") == education_level
+            country_match = not questionnaire_dict.get("destination_country") or questionnaire_dict.get("destination_country") == preferred_country
+            education_match = not questionnaire_dict.get("education_level") or questionnaire_dict.get("education_level") == education_level
             
             if country_match and education_match:
-                required_questionnaires.append(questionnaire)
+                required_questionnaires.append(questionnaire_dict)
         
         return required_questionnaires
     except Exception as e:
@@ -198,59 +423,96 @@ async def get_required_questionnaires(student_id: str, current_user: dict = Depe
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/profile-completeness/{student_id}")
 async def check_profile_completeness(student_id: str, current_user: dict = Depends(get_supabase_user)):
     """Check how complete a student's profile is, including required documents and questionnaires"""
     try:
         # Verify user is checking their own profile
-        if student_id != current_user.id:
+        if student_id != str(current_user["id"]):
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
-            
-            if not is_admin:
+            if current_user["role"] != "admin":
                 raise HTTPException(status_code=403, detail="Not authorized to check this profile")
         
-        # Get student profile data
-        student_response = supabase_client.table("students").select("*").eq("id", student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        # Get student profile data
+        cur.execute("""
+            SELECT * FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
+        
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        
         # Get education history
-        education_response = supabase_client.table("education").select("*").eq("student_id", student_id).execute()
-        education_history = education_response.data if hasattr(education_response, "data") else []
+        cur.execute("""
+            SELECT * FROM education
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        education_history = cur.fetchall()
         
         # Get documents
-        documents_response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
-        documents = documents_response.data if hasattr(documents_response, "data") else []
+        cur.execute("""
+            SELECT * FROM documents
+            WHERE student_id = %s
+        """, (student_id,))
         
-        # Get questionnaire responses
-        responses_response = supabase_client.table("questionnaire_responses").select("*").eq("student_id", student_id).execute()
-        questionnaire_responses = responses_response.data if hasattr(responses_response, "data") else []
+        documents = cur.fetchall()
+        
+        # Check if questionnaire_responses table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'questionnaire_responses'
+            )
+        """)
+        
+        questionnaire_responses = []
+        required_questionnaires = []
+        
+        if cur.fetchone()[0]:
+            # Get questionnaire responses
+            cur.execute("""
+                SELECT * FROM questionnaire_responses
+                WHERE student_id = %s
+            """, (student_id,))
+            
+            questionnaire_responses = cur.fetchall()
+            
+            # Get all required questionnaires
+            cur.execute("""
+                SELECT * FROM questionnaires
+                WHERE is_required = TRUE
+            """)
+            
+            required_questionnaires = cur.fetchall()
+        
+        cur.close()
+        conn.close()
         
         # Calculate completeness
+        student_dict = dict(student)
         profile_fields = ["name", "email", "phone", "address", "dob", "bio"]
         total_profile_fields = len(profile_fields)
-        completed_profile_fields = sum(1 for field in profile_fields if student.get(field))
+        completed_profile_fields = sum(1 for field in profile_fields if student_dict.get(field))
         
         profile_percentage = int((completed_profile_fields / total_profile_fields) * 100)
         
         # Check required document types
         required_doc_types = ["passport", "academic_transcript", "cv_resume"]
-        submitted_doc_types = set(doc["type"] for doc in documents)
+        submitted_doc_types = set(doc["document_type"] for doc in documents) if documents else set()
         missing_docs = [doc_type for doc_type in required_doc_types if doc_type not in submitted_doc_types]
         
-        # Get all required questionnaires
-        questionnaires_response = supabase_client.table("questionnaires").select("*").eq("is_required", True).execute()
-        required_questionnaires = questionnaires_response.data if hasattr(questionnaires_response, "data") else []
-        
         # Calculate questionnaire completeness
-        completed_questionnaire_ids = [response["questionnaire_id"] for response in questionnaire_responses]
-        missing_questionnaires = [q for q in required_questionnaires if q["id"] not in completed_questionnaire_ids]
+        completed_questionnaire_ids = [str(response["questionnaire_id"]) for response in questionnaire_responses] if questionnaire_responses else []
+        missing_questionnaires = [dict(q) for q in required_questionnaires if str(q["id"]) not in completed_questionnaire_ids] if required_questionnaires else []
         
         # Calculate overall completeness
         education_complete = len(education_history) > 0
@@ -273,7 +535,7 @@ async def check_profile_completeness(student_id: str, current_user: dict = Depen
                 "sections": sections,
             },
             "missing": {
-                "profile_fields": [field for field in profile_fields if not student.get(field)],
+                "profile_fields": [field for field in profile_fields if not student_dict.get(field)],
                 "documents": missing_docs,
                 "questionnaires": [{"id": q["id"], "title": q["title"]} for q in missing_questionnaires],
                 "education": not education_complete,
@@ -284,4 +546,3 @@ async def check_profile_completeness(student_id: str, current_user: dict = Depen
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
-

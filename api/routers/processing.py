@@ -4,12 +4,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 from datetime import datetime
-import supabase
-from api.config import SUPABASE_URL, SUPABASE_KEY
-from api.routers.auth import get_supabase_user
-
-# Initialize Supabase client
-supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+import psycopg2
+import psycopg2.extras
+from api.db_utils import get_db_connection
+from api.routers.auth import get_supabase_user  # We'll need to update this later
 
 router = APIRouter(prefix="/processing", tags=["processing"])
 
@@ -39,38 +37,78 @@ async def get_all_students(current_user: dict = Depends(get_supabase_user)):
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         if not user_role or user_role not in ["processing", "admin"]:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to access student data")
         
         # Get all students
-        students_response = supabase_client.table("students").select("id,name,email,phone,created_at,preferred_country").execute()
+        cur.execute("""
+            SELECT id, name, email, phone, created_at, preferred_country
+            FROM users
+            WHERE role = 'student'
+        """)
         
-        if not students_response or not hasattr(students_response, "data"):
-            return []
-        
-        students = students_response.data
+        students = cur.fetchall()
+        students_list = [dict(student) for student in students]
         
         # Get applications count for each student
-        for student in students:
-            app_count_response = supabase_client.table("applications").select("id", count="exact").eq("student_id", student["id"]).execute()
-            student["application_count"] = app_count_response.count if hasattr(app_count_response, "count") else 0
+        for student in students_list:
+            cur.execute("""
+                SELECT COUNT(*) as count
+                FROM applications
+                WHERE student_id = %s
+            """, (student["id"],))
+            
+            app_count = cur.fetchone()
+            student["application_count"] = app_count["count"] if app_count else 0
             
             # Get documents count
-            doc_count_response = supabase_client.table("documents").select("id", count="exact").eq("user_id", student["id"]).execute()
-            student["document_count"] = doc_count_response.count if hasattr(doc_count_response, "count") else 0
+            cur.execute("""
+                SELECT COUNT(*) as count
+                FROM documents
+                WHERE student_id = %s
+            """, (student["id"],))
+            
+            doc_count = cur.fetchone()
+            student["document_count"] = doc_count["count"] if doc_count else 0
         
-        return students
+        cur.close()
+        conn.close()
+        
+        return students_list
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -84,45 +122,88 @@ async def get_student_details(student_id: str, current_user: dict = Depends(get_
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         if not user_role or user_role not in ["processing", "admin"]:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to access student data")
         
         # Get student profile
-        student_response = supabase_client.table("students").select("*").eq("id", student_id).execute()
+        cur.execute("""
+            SELECT * FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        
         # Get student's education history
-        education_response = supabase_client.table("education").select("*").eq("student_id", student_id).execute()
-        education = education_response.data if hasattr(education_response, "data") else []
+        cur.execute("""
+            SELECT * FROM education
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        education = cur.fetchall()
         
         # Get student's documents
-        documents_response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
-        documents = documents_response.data if hasattr(documents_response, "data") else []
+        cur.execute("""
+            SELECT * FROM documents
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        documents = cur.fetchall()
         
         # Get student's applications
-        applications_response = supabase_client.table("applications").select("*").eq("student_id", student_id).execute()
-        applications = applications_response.data if hasattr(applications_response, "data") else []
+        cur.execute("""
+            SELECT * FROM applications
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        applications = cur.fetchall()
+        
+        cur.close()
+        conn.close()
         
         return {
-            "profile": student,
-            "education": education,
-            "documents": documents,
-            "applications": applications
+            "profile": dict(student),
+            "education": [dict(edu) for edu in education],
+            "documents": [dict(doc) for doc in documents],
+            "applications": [dict(app) for app in applications]
         }
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -137,65 +218,167 @@ async def create_student_application(application: ApplicationCreate, current_use
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         if not user_role or user_role not in ["processing", "admin"]:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to create applications")
         
         # Verify student exists
-        student_response = supabase_client.table("students").select("*").eq("id", application.student_id).execute()
+        cur.execute("""
+            SELECT * FROM users
+            WHERE id = %s AND role = 'student'
+        """, (application.student_id,))
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
+        # Check if applications table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'applications'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create applications table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE applications (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    university_name VARCHAR(255) NOT NULL,
+                    program_name VARCHAR(255) NOT NULL,
+                    intake VARCHAR(100) NOT NULL,
+                    status VARCHAR(50) DEFAULT 'new',
+                    progress INTEGER DEFAULT 10,
+                    application_fee NUMERIC,
+                    tuition_fee NUMERIC,
+                    estimated_living_cost NUMERIC,
+                    documents_required TEXT[],
+                    notes TEXT,
+                    created_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+            conn.commit()
+        
+        # Check if application_history table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'application_history'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create application_history table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE application_history (
+                    id SERIAL PRIMARY KEY,
+                    application_id INTEGER NOT NULL,
+                    status VARCHAR(50) NOT NULL,
+                    progress INTEGER,
+                    notes TEXT,
+                    created_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+            conn.commit()
+        
         # Create application
-        app_data = {
-            "student_id": application.student_id,
-            "university_name": application.university_name,
-            "program_name": application.program_name,
-            "intake": application.intake,
-            "status": application.status,
-            "progress": 10,  # Initial progress
-            "application_fee": application.application_fee,
-            "tuition_fee": application.tuition_fee,
-            "estimated_living_cost": application.estimated_living_cost,
-            "documents_required": application.documents_required,
-            "notes": application.notes,
-            "created_by": user_id,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat()
-        }
+        cur.execute("""
+            INSERT INTO applications (
+                student_id, university_name, program_name, intake, status,
+                progress, application_fee, tuition_fee, estimated_living_cost,
+                documents_required, notes, created_by, created_at, updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            application.student_id,
+            application.university_name,
+            application.program_name,
+            application.intake,
+            application.status,
+            10,  # Initial progress
+            application.application_fee,
+            application.tuition_fee,
+            application.estimated_living_cost,
+            application.documents_required,
+            application.notes,
+            user_id,
+            datetime.now(),
+            datetime.now()
+        ))
         
-        result = supabase_client.table("applications").insert(app_data).execute()
-        
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
-            raise HTTPException(status_code=500, detail="Failed to create application")
+        application_id = cur.fetchone()[0]
         
         # Create application history entry
-        history_data = {
-            "application_id": result.data[0]["id"],
-            "status": application.status,
-            "progress": 10,
-            "notes": f"Application created for {application.university_name}, {application.program_name}",
-            "created_by": user_id,
-            "created_at": datetime.now().isoformat()
-        }
+        cur.execute("""
+            INSERT INTO application_history (
+                application_id, status, progress, notes, created_by, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            application_id,
+            application.status,
+            10,
+            f"Application created for {application.university_name}, {application.program_name}",
+            user_id,
+            datetime.now()
+        ))
         
-        supabase_client.table("application_history").insert(history_data).execute()
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return {
             "success": True, 
             "message": "Application created successfully", 
-            "application_id": result.data[0]["id"]
+            "application_id": application_id
         }
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -210,51 +393,108 @@ async def update_student_application(application_id: str, application: Applicati
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         if not user_role or user_role not in ["processing", "admin"]:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to update applications")
         
         # Verify application exists
-        app_response = supabase_client.table("applications").select("*").eq("id", application_id).execute()
+        cur.execute("""
+            SELECT * FROM applications
+            WHERE id = %s
+        """, (application_id,))
         
-        if not app_response or not hasattr(app_response, "data") or len(app_response.data) == 0:
+        app = cur.fetchone()
+        
+        if not app:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Application not found")
         
         # Update application
-        update_data = {"updated_at": datetime.now().isoformat()}
+        update_fields = []
+        update_values = []
+        
         if application.status is not None:
-            update_data["status"] = application.status
+            update_fields.append("status = %s")
+            update_values.append(application.status)
+        
         if application.progress is not None:
-            update_data["progress"] = application.progress
+            update_fields.append("progress = %s")
+            update_values.append(application.progress)
+        
         if application.notes is not None:
-            update_data["notes"] = application.notes
+            update_fields.append("notes = %s")
+            update_values.append(application.notes)
         
-        result = supabase_client.table("applications").update(update_data).eq("id", application_id).execute()
+        update_fields.append("updated_at = %s")
+        update_values.append(datetime.now())
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
-            raise HTTPException(status_code=500, detail="Failed to update application")
+        # Add application_id to values
+        update_values.append(application_id)
+        
+        # Build update query
+        update_query = f"""
+            UPDATE applications
+            SET {', '.join(update_fields)}
+            WHERE id = %s
+            RETURNING id, status, progress
+        """
+        
+        cur.execute(update_query, update_values)
+        
+        updated_app = cur.fetchone()
         
         # Create application history entry
-        history_data = {
-            "application_id": application_id,
-            "status": application.status if application.status is not None else result.data[0]["status"],
-            "progress": application.progress if application.progress is not None else result.data[0]["progress"],
-            "notes": application.update_message or "Application updated",
-            "created_by": user_id,
-            "created_at": datetime.now().isoformat()
-        }
+        cur.execute("""
+            INSERT INTO application_history (
+                application_id, status, progress, notes, created_by, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            application_id,
+            application.status if application.status is not None else updated_app["status"],
+            application.progress if application.progress is not None else updated_app["progress"],
+            application.update_message or "Application updated",
+            user_id,
+            datetime.now()
+        ))
         
-        supabase_client.table("application_history").insert(history_data).execute()
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return {
             "success": True, 
@@ -273,36 +513,72 @@ async def get_application_history(application_id: str, current_user: dict = Depe
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         # Verify application exists
-        app_response = supabase_client.table("applications").select("*").eq("id", application_id).execute()
+        cur.execute("""
+            SELECT * FROM applications
+            WHERE id = %s
+        """, (application_id,))
         
-        if not app_response or not hasattr(app_response, "data") or len(app_response.data) == 0:
+        app = cur.fetchone()
+        
+        if not app:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Application not found")
         
         # If user is a student, check if they own the application
         if not user_role:
-            student_id = app_response.data[0]["student_id"]
+            student_id = app["student_id"]
             if user_id != student_id:
+                cur.close()
+                conn.close()
                 raise HTTPException(status_code=403, detail="Not authorized to view this application history")
         
         # Get application history
-        history_response = supabase_client.table("application_history").select("*").eq("application_id", application_id).order("created_at", desc=True).execute()
+        cur.execute("""
+            SELECT * FROM application_history
+            WHERE application_id = %s
+            ORDER BY created_at DESC
+        """, (application_id,))
         
-        if not history_response or not hasattr(history_response, "data"):
-            return []
+        history = cur.fetchall()
         
-        return history_response.data
+        cur.close()
+        conn.close()
+        
+        return [dict(item) for item in history]
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -316,61 +592,140 @@ async def generate_specific_recommendation(student_id: str, current_user: dict =
         user_id = current_user.id
         user_role = None
         
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         # Check processing team
-        proc_response = supabase_client.table("processing_team").select("*").eq("id", user_id).execute()
-        if proc_response and hasattr(proc_response, "data") and len(proc_response.data) > 0:
-            user_role = "processing"
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'processing_team'
+            )
+        """)
+        
+        if cur.fetchone()[0]:
+            # Table exists, check if user is in processing team
+            cur.execute("""
+                SELECT * FROM processing_team
+                WHERE id = %s
+            """, (user_id,))
+            
+            if cur.fetchone():
+                user_role = "processing"
         
         # If not in processing team, check if admin
         if not user_role:
-            admin_response = supabase_client.table("admins").select("*").eq("id", user_id).execute()
-            if admin_response and hasattr(admin_response, "data") and len(admin_response.data) > 0:
+            cur.execute("""
+                SELECT * FROM users
+                WHERE id = %s AND role = 'admin'
+            """, (user_id,))
+            
+            if cur.fetchone():
                 user_role = "admin"
         
         if not user_role or user_role not in ["processing", "admin"]:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to generate recommendations")
         
         # Fetch student data
-        student_response = supabase_client.table("students").select("*").eq("id", student_id).execute()
+        cur.execute("""
+            SELECT * FROM users
+            WHERE id = %s AND role = 'student'
+        """, (student_id,))
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        
         # Get student's education history
-        education_response = supabase_client.table("education").select("*").eq("student_id", student_id).execute()
-        education = education_response.data if hasattr(education_response, "data") else []
+        cur.execute("""
+            SELECT * FROM education
+            WHERE student_id = %s
+        """, (student_id,))
+        
+        education = cur.fetchall()
+        
+        # Check if recommendations table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'recommendations'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create recommendations table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE recommendations (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    created_by INTEGER,
+                    type VARCHAR(100) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    subtitle VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    match_percentage INTEGER NOT NULL,
+                    details JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+            conn.commit()
         
         # Use the student data to create a recommendation (placeholder for now)
-        recommendation = {
-            "student_id": student_id,
-            "created_by": user_id,
-            "type": "university",
-            "title": "University of Example",
-            "subtitle": "MSc in Computer Science",
-            "description": f"Based on {student['name']}'s profile, we recommend University of Example which offers excellent programs matching their academic background.",
-            "match_percentage": 90,
-            "details": {
+        student_dict = dict(student)
+        
+        # Insert recommendation into database
+        cur.execute("""
+            INSERT INTO recommendations (
+                student_id, created_by, type, title, subtitle, 
+                description, match_percentage, details, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            student_id,
+            user_id,
+            "university",
+            "University of Example",
+            "MSc in Computer Science",
+            f"Based on {student_dict['name']}'s profile, we recommend University of Example which offers excellent programs matching their academic background.",
+            90,
+            psycopg2.extras.Json({
                 "location": "Example City",
                 "tuition": "$20,000 per year",
                 "duration": "2 years",
                 "requirements": "Bachelor's degree, IELTS 6.5+",
                 "notes": "This university has a high acceptance rate for international students with similar profiles."
-            },
-            "created_at": datetime.now().isoformat()
-        }
+            }),
+            datetime.now()
+        ))
         
-        # Store recommendation in database
-        result = supabase_client.table("recommendations").insert(recommendation).execute()
+        recommendation_id = cur.fetchone()[0]
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
-            raise HTTPException(status_code=500, detail="Failed to create recommendation")
+        # Fetch the created recommendation
+        cur.execute("""
+            SELECT * FROM recommendations
+            WHERE id = %s
+        """, (recommendation_id,))
+        
+        recommendation = cur.fetchone()
+        
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return {
             "success": True, 
             "message": "Recommendation generated successfully", 
-            "recommendation": result.data[0]
+            "recommendation": dict(recommendation)
         }
     except Exception as e:
         if isinstance(e, HTTPException):

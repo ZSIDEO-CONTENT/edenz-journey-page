@@ -5,11 +5,10 @@ from typing import List, Dict, Any, Optional
 import os
 import uuid
 from datetime import datetime
-import supabase
-from api.config import SUPABASE_URL, SUPABASE_KEY
-
-# Initialize Supabase client
-supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+import psycopg2
+import psycopg2.extras
+from api.db_utils import get_db_connection
+from api.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -74,69 +73,132 @@ async def get_required_documents(student_id: str, destination_country: Optional[
         # Verify user is fetching their own required documents
         if student_id != current_user.id:
             # Check if user is admin
-            user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-            is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+            conn = get_db_connection()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            
+            cur.execute("""
+                SELECT * FROM users 
+                WHERE id = %s AND role = 'admin'
+            """, (current_user.id,))
+            
+            is_admin = cur.fetchone() is not None
+            
+            cur.close()
+            conn.close()
             
             if not is_admin:
                 raise HTTPException(status_code=403, detail="Not authorized to view these documents")
         
         # If destination country not provided, get it from student profile
         if not destination_country:
-            student_response = supabase_client.table("students").select("preferred_country").eq("id", student_id).execute()
+            conn = get_db_connection()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
             
-            if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+            cur.execute("""
+                SELECT preferred_country FROM users
+                WHERE id = %s AND role = 'student'
+            """, (student_id,))
+            
+            student = cur.fetchone()
+            
+            cur.close()
+            conn.close()
+            
+            if not student:
                 raise HTTPException(status_code=404, detail="Student not found")
             
-            destination_country = student_response.data[0].get("preferred_country")
+            destination_country = student.get("preferred_country")
+        
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Check if required_documents table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'required_documents'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Create required_documents table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE required_documents (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    type VARCHAR(100) NOT NULL,
+                    description TEXT,
+                    country_code VARCHAR(10),
+                    is_required BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
         
         # Get base required documents (required for all countries)
-        base_docs_response = supabase_client.table("required_documents").select("*").is_("country_code", "null").execute()
+        cur.execute("""
+            SELECT * FROM required_documents
+            WHERE country_code IS NULL
+        """)
         
-        base_required_docs = []
-        if base_docs_response and hasattr(base_docs_response, "data"):
-            base_required_docs = base_docs_response.data
+        base_required_docs = cur.fetchall()
         
         # Get country-specific required documents
         country_docs = []
         if destination_country:
-            country_docs_response = supabase_client.table("required_documents").select("*").eq("country_code", destination_country.lower()).execute()
+            cur.execute("""
+                SELECT * FROM required_documents
+                WHERE country_code = %s
+            """, (destination_country.lower(),))
             
-            if country_docs_response and hasattr(country_docs_response, "data"):
-                country_docs = country_docs_response.data
+            country_docs = cur.fetchall()
         
         # Combine both sets of documents, with country-specific ones overriding base ones
-        all_required_docs = base_required_docs.copy()
+        all_required_docs = [dict(doc) for doc in base_required_docs]
         
         # Add country-specific docs, overriding base docs with the same type
         for doc in country_docs:
+            doc_dict = dict(doc)
             # Check if this document type already exists in base docs
-            existing_index = next((i for i, base_doc in enumerate(all_required_docs) if base_doc["type"] == doc["type"]), None)
+            existing_index = next((i for i, base_doc in enumerate(all_required_docs) if base_doc["type"] == doc_dict["type"]), None)
             
             if existing_index is not None:
                 # Replace the base doc with the country-specific one
-                all_required_docs[existing_index] = doc
+                all_required_docs[existing_index] = doc_dict
             else:
                 # Add new country-specific doc
-                all_required_docs.append(doc)
+                all_required_docs.append(doc_dict)
         
         # Get documents already submitted by student
-        submitted_docs_response = supabase_client.table("documents").select("*").eq("user_id", student_id).execute()
+        cur.execute("""
+            SELECT * FROM documents
+            WHERE student_id = %s
+        """, (student_id,))
         
-        submitted_docs = {}
-        if submitted_docs_response and hasattr(submitted_docs_response, "data"):
-            for doc in submitted_docs_response.data:
-                submitted_docs[doc["type"]] = doc
+        submitted_docs = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # Create a dictionary of submitted docs by type
+        submitted_docs_by_type = {}
+        for doc in submitted_docs:
+            doc_dict = dict(doc)
+            submitted_docs_by_type[doc_dict["document_type"]] = doc_dict
         
         # Mark required documents as submitted or not
         required_docs_with_status = []
         for doc in all_required_docs:
             doc_copy = doc.copy()
-            doc_copy["submitted"] = doc["type"] in submitted_docs
+            doc_copy["submitted"] = doc["type"] in submitted_docs_by_type
             
             if doc_copy["submitted"]:
-                doc_copy["document_id"] = submitted_docs[doc["type"]]["id"]
-                doc_copy["status"] = submitted_docs[doc["type"]]["status"]
-                doc_copy["feedback"] = submitted_docs[doc["type"]]["feedback"]
+                doc_copy["document_id"] = submitted_docs_by_type[doc["type"]]["id"]
+                doc_copy["status"] = submitted_docs_by_type[doc["type"]]["status"]
+                doc_copy["feedback"] = submitted_docs_by_type[doc["type"]]["feedback"]
             
             required_docs_with_status.append(doc_copy)
         
@@ -151,40 +213,98 @@ async def verify_document(document_id: str, verification: DocumentVerification, 
     """Record verification results for a document (admin only)"""
     try:
         # Check if user is admin
-        user_response = supabase_client.table("admins").select("*").eq("id", current_user.id).execute()
-        is_admin = user_response and hasattr(user_response, "data") and len(user_response.data) > 0
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        cur.execute("""
+            SELECT * FROM users 
+            WHERE id = %s AND role = 'admin'
+        """, (current_user.id,))
+        
+        is_admin = cur.fetchone() is not None
         
         if not is_admin:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=403, detail="Not authorized to verify documents")
         
+        # Check if document_verifications table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'document_verifications'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Create document_verifications table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE document_verifications (
+                    id SERIAL PRIMARY KEY,
+                    document_id INTEGER NOT NULL,
+                    verification_result JSONB NOT NULL,
+                    verification_status VARCHAR(50) NOT NULL,
+                    officer_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+                    FOREIGN KEY (officer_id) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+            conn.commit()
+        
         # Update the document verification status
-        doc_update = {
-            "status": verification.verification_status,
-            "updated_at": datetime.now().isoformat()
-        }
+        cur.execute("""
+            UPDATE documents
+            SET status = %s, 
+                updated_at = %s
+            WHERE id = %s
+            RETURNING id
+        """, (verification.verification_status, datetime.now(), document_id))
         
-        if verification.verification_status == "failed":
-            doc_update["feedback"] = "Document verification failed. Please check the issues and resubmit."
-        elif verification.verification_status == "manual_review":
-            doc_update["feedback"] = "Document requires manual review by our team."
+        updated_doc = cur.fetchone()
         
-        # Update the document
-        doc_result = supabase_client.table("documents").update(doc_update).eq("id", document_id).execute()
-        
-        if not doc_result or not hasattr(doc_result, "data") or len(doc_result.data) == 0:
+        if not updated_doc:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Document not found")
         
-        # Store verification data
-        verify_result = supabase_client.table("document_verifications").insert({
-            "document_id": document_id,
-            "verification_result": verification.verification_result,
-            "verification_status": verification.verification_status,
-            "officer_id": verification.officer_id or current_user.id,
-            "created_at": datetime.now().isoformat()
-        }).execute()
+        # Add feedback if verification failed or needs manual review
+        if verification.verification_status == "failed":
+            cur.execute("""
+                UPDATE documents
+                SET feedback = 'Document verification failed. Please check the issues and resubmit.'
+                WHERE id = %s
+            """, (document_id,))
+        elif verification.verification_status == "manual_review":
+            cur.execute("""
+                UPDATE documents
+                SET feedback = 'Document requires manual review by our team.'
+                WHERE id = %s
+            """, (document_id,))
         
-        if not verify_result or not hasattr(verify_result, "data"):
-            raise HTTPException(status_code=500, detail="Failed to store verification data")
+        # Store verification data
+        cur.execute("""
+            INSERT INTO document_verifications (
+                document_id, verification_result, verification_status, officer_id, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            document_id,
+            psycopg2.extras.Json(verification.verification_result),
+            verification.verification_status,
+            verification.officer_id or current_user.id,
+            datetime.now()
+        ))
+        
+        verification_id = cur.fetchone()[0]
+        
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return {"success": True, "message": "Document verification recorded successfully"}
     except Exception as e:
@@ -192,18 +312,56 @@ async def verify_document(document_id: str, verification: DocumentVerification, 
             raise e
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/templates/{document_type}")
 async def get_document_template(document_type: str, current_user: dict = Depends(get_supabase_user)):
     """Get a template or example for a specific document type"""
     try:
-        # Get the template from the database
-        template_response = supabase_client.table("document_templates").select("*").eq("document_type", document_type).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not template_response or not hasattr(template_response, "data") or len(template_response.data) == 0:
+        # Check if document_templates table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'document_templates'
+            )
+        """)
+        
+        table_exists = cur.fetchone()[0]
+        
+        if not table_exists:
+            # Create document_templates table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE document_templates (
+                    id SERIAL PRIMARY KEY,
+                    document_type VARCHAR(100) NOT NULL UNIQUE,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    sample_url TEXT,
+                    instructions TEXT,
+                    common_mistakes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail=f"Template for {document_type} not found")
         
-        template = template_response.data[0]
+        # Get the template from the database
+        cur.execute("""
+            SELECT * FROM document_templates
+            WHERE document_type = %s
+        """, (document_type,))
+        
+        template = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not template:
+            raise HTTPException(status_code=404, detail=f"Template for {document_type} not found")
         
         return {
             "document_type": template["document_type"],

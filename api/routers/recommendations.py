@@ -5,9 +5,11 @@ from typing import List, Dict, Any, Optional
 import os
 import uuid
 from datetime import datetime
-import supabase
+import psycopg2
+import psycopg2.extras
 from crewai import Agent, Task, Crew, Process
 from langchain.chat_models import ChatOpenAI
+from api.db_utils import get_db_connection
 
 # Load environment variables
 os.environ["OPENAI_API_KEY"] = "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"
@@ -19,11 +21,6 @@ llm = ChatOpenAI(
     openai_api_key="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",
     openai_api_base="https://openrouter.ai/api/v1"
 )
-
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
-supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
-supabase_client = supabase.create_client(supabase_url, supabase_key)
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -66,22 +63,64 @@ async def generate_recommendations(request: RecommendationRequest):
     """Generate AI recommendations for a student"""
     try:
         # First, fetch student data to get a complete profile
-        student_response = supabase_client.table("students").select("*").eq("id", request.student_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not student_response or not hasattr(student_response, "data") or len(student_response.data) == 0:
+        # Check if students table exists and get student data
+        cur.execute("""
+            SELECT * FROM users 
+            WHERE id = %s AND role = 'student'
+        """, (request.student_id,))
+        
+        student = cur.fetchone()
+        
+        if not student:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="Student not found")
         
-        student = student_response.data[0]
-        
         # Get student documents
-        documents_response = supabase_client.table("documents").select("*").eq("user_id", request.student_id).execute()
-        documents = documents_response.data if hasattr(documents_response, "data") else []
+        cur.execute("""
+            SELECT * FROM documents
+            WHERE student_id = %s
+        """, (request.student_id,))
+        
+        documents = cur.fetchall()
+        documents_list = [dict(doc) for doc in documents] if documents else []
+        
+        # Check if recommendations table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'recommendations'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create recommendations table if it doesn't exist
+            cur.execute("""
+                CREATE TABLE recommendations (
+                    id SERIAL PRIMARY KEY,
+                    student_id INTEGER NOT NULL,
+                    type VARCHAR(100) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    subtitle VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    match_percentage INTEGER NOT NULL,
+                    details JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """)
+            conn.commit()
         
         # Combine all student data
+        student_dict = dict(student)
         student_profile = {
-            "id": student["id"],
-            "name": student["name"],
-            "email": student["email"],
+            "id": student_dict["id"],
+            "name": student_dict["name"],
+            "email": student_dict["email"],
             "education_level": request.education_level,
             "gpa": request.gpa,
             "english_score": request.english_score,
@@ -89,7 +128,7 @@ async def generate_recommendations(request: RecommendationRequest):
             "preferred_countries": request.preferred_countries,
             "preferred_fields": request.preferred_fields,
             "budget": request.budget,
-            "documents": documents
+            "documents": documents_list
         }
         
         # Create a task for the agent to generate recommendations
@@ -133,7 +172,6 @@ async def generate_recommendations(request: RecommendationRequest):
         # In production, parse the agent's response and extract recommendations
         mock_recommendations = [
             {
-                "id": str(uuid.uuid4()),
                 "student_id": request.student_id,
                 "type": "university",
                 "title": "University of Glasgow",
@@ -147,10 +185,9 @@ async def generate_recommendations(request: RecommendationRequest):
                     "requirements": "2:1 (or equivalent) in Computer Science, Mathematics or related field, IELTS: 6.5",
                     "application_deadline": "June 30, 2024"
                 },
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now()
             },
             {
-                "id": str(uuid.uuid4()),
                 "student_id": request.student_id,
                 "type": "improvement",
                 "title": "Improve your IELTS score",
@@ -162,13 +199,36 @@ async def generate_recommendations(request: RecommendationRequest):
                     "recommendation": "Focus on improving writing skills",
                     "resources": "Edenz IELTS preparation course, IELTS Writing practice with feedback"
                 },
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now()
             }
         ]
         
         # Store recommendations in database
         for rec in mock_recommendations:
-            supabase_client.table("recommendations").insert(rec).execute()
+            cur.execute("""
+                INSERT INTO recommendations (
+                    student_id, type, title, subtitle, description,
+                    match_percentage, details, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                rec["student_id"],
+                rec["type"],
+                rec["title"],
+                rec["subtitle"],
+                rec["description"],
+                rec["match_percentage"],
+                psycopg2.extras.Json(rec["details"]),
+                rec["created_at"]
+            ))
+            
+            rec_id = cur.fetchone()[0]
+            rec["id"] = rec_id
+        
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return {"success": True, "recommendations": mock_recommendations}
     except Exception as e:
@@ -180,12 +240,36 @@ async def generate_recommendations(request: RecommendationRequest):
 async def get_student_recommendations(student_id: str):
     """Get all recommendations for a student"""
     try:
-        response = supabase_client.table("recommendations").select("*").eq("student_id", student_id).order("created_at", desc=True).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not response or not hasattr(response, "data"):
-            raise HTTPException(status_code=500, detail="Failed to fetch recommendations")
+        # Check if recommendations table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'recommendations'
+            )
+        """)
         
-        return response.data
+        if not cur.fetchone()[0]:
+            cur.close()
+            conn.close()
+            return []
+        
+        # Get recommendations for student
+        cur.execute("""
+            SELECT * FROM recommendations
+            WHERE student_id = %s
+            ORDER BY created_at DESC
+        """, (student_id,))
+        
+        recommendations = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        return [dict(rec) for rec in recommendations] if recommendations else []
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

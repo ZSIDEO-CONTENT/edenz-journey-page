@@ -5,12 +5,9 @@ from typing import List, Dict, Any, Optional
 import os
 import uuid
 from datetime import datetime
-import supabase
-
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL", "https://vxievjimtordkobtuink.supabase.co")
-supabase_key = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWV2amltdG9yZGtvYnR1aW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwOTEyNDEsImV4cCI6MjA1ODY2NzI0MX0.h_YWBX9nhfGlq6MaR3jSDu56CagNpoprBgqiXwjhJAI")
-supabase_client = supabase.create_client(supabase_url, supabase_key)
+import psycopg2
+import psycopg2.extras
+from api.db_utils import get_db_connection
 
 router = APIRouter(prefix="/consultation", tags=["consultation"])
 
@@ -50,18 +47,72 @@ async def create_consultation(consultation: ConsultationBooking):
         
         # Save to database
         try:
-            result = supabase_client.table("consultations").insert({
-                **booking_data,
-                "created_at": datetime.now().isoformat(),
-            }).execute()
+            conn = get_db_connection()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
             
-            # Extract the ID of the created consultation
-            if result and hasattr(result, "data") and len(result.data) > 0:
-                consultation_id = result.data[0].get("id")
-                print(f"Consultation saved with ID: {consultation_id}")
-            else:
-                print("Consultation saved but couldn't retrieve ID")
-                consultation_id = ""
+            # Check if consultations table exists
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'consultations'
+                )
+            """)
+            
+            table_exists = cur.fetchone()[0]
+            
+            if not table_exists:
+                # Create consultations table if it doesn't exist
+                cur.execute("""
+                    CREATE TABLE consultations (
+                        id SERIAL PRIMARY KEY,
+                        student_id INTEGER,
+                        name VARCHAR(255) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        phone VARCHAR(50) NOT NULL,
+                        date VARCHAR(50) NOT NULL,
+                        time VARCHAR(50) NOT NULL,
+                        service VARCHAR(100),
+                        message TEXT,
+                        notes TEXT,
+                        status VARCHAR(50) DEFAULT 'pending',
+                        payment_status VARCHAR(50) DEFAULT 'pending',
+                        payment_reference VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """)
+                conn.commit()
+            
+            # Insert the consultation data
+            cur.execute("""
+                INSERT INTO consultations (
+                    name, email, phone, date, time, service, message, 
+                    status, payment_status, payment_reference, created_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                booking_data["name"],
+                booking_data["email"],
+                booking_data["phone"],
+                booking_data["date"],
+                booking_data["time"],
+                booking_data["service"],
+                booking_data["message"],
+                booking_data["status"],
+                booking_data["payment_status"],
+                booking_data["payment_reference"],
+                datetime.now()
+            ))
+            
+            consultation_id = cur.fetchone()[0]
+            conn.commit()
+            
+            print(f"Consultation saved with ID: {consultation_id}")
+            
+            cur.close()
+            conn.close()
         except Exception as e:
             print(f"Error saving consultation: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -83,12 +134,22 @@ async def create_consultation(consultation: ConsultationBooking):
 async def get_consultation(consultation_id: str):
     """Get consultation details by ID"""
     try:
-        result = supabase_client.table("consultations").select("*").eq("id", consultation_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
+        cur.execute("""
+            SELECT * FROM consultations WHERE id = %s
+        """, (consultation_id,))
+        
+        consultation = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not consultation:
             raise HTTPException(status_code=404, detail="Consultation not found")
         
-        return result.data[0]
+        return dict(consultation)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -98,13 +159,25 @@ async def get_consultation(consultation_id: str):
 async def update_payment_status(consultation_id: str, payment_reference: str):
     """Update payment status for a consultation"""
     try:
-        result = supabase_client.table("consultations").update({
-            "payment_status": "completed",
-            "payment_reference": payment_reference,
-            "updated_at": datetime.now().isoformat()
-        }).eq("id", consultation_id).execute()
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        if not result or not hasattr(result, "data") or len(result.data) == 0:
+        cur.execute("""
+            UPDATE consultations
+            SET payment_status = 'completed', 
+                payment_reference = %s,
+                updated_at = %s
+            WHERE id = %s
+            RETURNING id
+        """, (payment_reference, datetime.now(), consultation_id))
+        
+        updated = cur.fetchone()
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        if not updated:
             raise HTTPException(status_code=404, detail="Consultation not found")
         
         return {"success": True, "message": "Payment status updated successfully"}
