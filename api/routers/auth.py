@@ -17,13 +17,85 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# ... keep existing code (Token, UserAuth, StudentRegister, ProcessingMemberRegister, AdminRegister classes)
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: Dict[str, Any]
+
+class UserAuth(BaseModel):
+    email: str
+    password: str
+
+class StudentRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str
+    role: str = "student"  # Default to student role
+
+class ProcessingMemberRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str
+    managed_regions: Optional[List[str]] = None
+    admin_token: str  # Token of the admin creating this user
+
+class AdminRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str
+    adminSecretKey: str
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    # ... keep existing code (create_access_token function)
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now() + expires_delta
+    else:
+        expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
 
 async def get_supabase_user(authorization: Optional[str] = Header(None)):
-    # ... keep existing code (get_supabase_user function)
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        user_response = supabase_client.auth.get_user(token)
+        
+        if not user_response or not user_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+            )
+        
+        user_id = user_response.user.id
+        
+        # Get user details from users table
+        user_data_response = supabase_client.table("users").select("*").eq("id", user_id).execute()
+        
+        if not user_data_response or not hasattr(user_data_response, "data") or len(user_data_response.data) == 0:
+            # Return basic user data if not found in users table
+            return {
+                "id": user_id,
+                "email": user_response.user.email,
+                "role": "student"  # Default role
+            }
+        
+        # Return full user data from users table
+        return user_data_response.data[0]
+    except Exception as e:
+        print(f"Auth error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication error: {str(e)}",
+        )
 
 @router.post("/register/admin", status_code=status.HTTP_201_CREATED)
 async def register_admin(user: AdminRegister):
@@ -275,5 +347,4 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @router.get("/me")
 async def read_users_me(current_user: dict = Depends(get_supabase_user)):
-    # ... keep existing code (read_users_me function)
-
+    return current_user

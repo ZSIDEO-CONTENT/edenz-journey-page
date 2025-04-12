@@ -66,6 +66,7 @@ const StudentRegister = () => {
           email: values.email,
           password: values.password,
           phone: values.phone,
+          role: 'student', // Explicitly set the role
         }),
       });
       
