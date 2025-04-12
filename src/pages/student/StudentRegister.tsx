@@ -55,7 +55,7 @@ const StudentRegister = () => {
         phone: values.phone,
       });
       
-      // Send registration request to the actual API endpoint
+      // Send registration request to the new API endpoint
       const response = await fetch('http://localhost:8000/api/auth/register/student', {
         method: 'POST',
         headers: {

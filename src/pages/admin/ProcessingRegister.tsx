@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Users } from "lucide-react";
+import { registerProcessingMember } from "@/lib/api";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -49,13 +50,6 @@ const ProcessingRegister = () => {
     setIsLoading(true);
     
     try {
-      // Get admin token from localStorage
-      const adminToken = localStorage.getItem("adminToken");
-      
-      if (!adminToken) {
-        throw new Error("Admin authentication required");
-      }
-      
       console.log("Registering processing team member with data:", {
         name: values.name,
         email: values.email,
@@ -63,29 +57,14 @@ const ProcessingRegister = () => {
         managed_regions: values.managed_regions,
       });
       
-      // Send the registration request
-      const response = await fetch('http://localhost:8000/api/auth/processing/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({
-          name: values.name,
-          email: values.email,
-          password: values.password,
-          phone: values.phone,
-          managed_regions: values.managed_regions || [],
-          admin_token: adminToken,
-        }),
+      // Use the registerProcessingMember function from our API utility
+      const result = await registerProcessingMember({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        phone: values.phone,
+        managed_regions: values.managed_regions || [],
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error("Registration failed with status:", response.status, data);
-        throw new Error(data.detail || 'Registration failed');
-      }
       
       toast({
         title: "Success",

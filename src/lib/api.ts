@@ -1,246 +1,28 @@
 
-// api.ts
+// api.ts - Updated to work with PostgreSQL backend
 
-// Student functions
-export const getStudentRecommendations = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
+// API base URL
+const API_BASE_URL = "http://localhost:8000/api";
 
+// Helper function for API requests
+const fetchAPI = async (endpoint: string, options = {}) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/recommendations/${studentId}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
       },
     });
-
+    
     if (!response.ok) {
-      throw new Error("Failed to fetch student recommendations");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Request failed with status ${response.status}`);
     }
-
+    
     return await response.json();
   } catch (error) {
-    console.error("Get student recommendations error:", error);
-    throw error;
-  }
-};
-
-export const generateStudentRecommendation = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-
-  try {
-    const response = await fetch(`http://localhost:8000/api/recommendations/generate/${studentId}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to generate student recommendation");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Generate student recommendation error:", error);
-    throw error;
-  }
-};
-
-export const getStudentDetails = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/profile/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch student details");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get student details error:", error);
-    throw error;
-  }
-};
-
-// Student profile
-export const getStudentProfile = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/profile/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch student profile");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get student profile error:", error);
-    throw error;
-  }
-};
-
-export const updateStudentProfile = async (studentId: string, profileData: any) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/profile/${studentId}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(profileData),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to update student profile");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Update student profile error:", error);
-    throw error;
-  }
-};
-
-// Student education
-export const getStudentEducation = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/education/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch student education");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get student education error:", error);
-    throw error;
-  }
-};
-
-// Student documents
-export const getStudentDocuments = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/documents/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch student documents");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get student documents error:", error);
-    throw error;
-  }
-};
-
-export const getRequiredDocuments = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/documents/required/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch required documents");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get required documents error:", error);
-    throw error;
-  }
-};
-
-export const uploadDocument = async (formData: FormData) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/documents/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to upload document");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Upload document error:", error);
-    throw error;
-  }
-};
-
-// Student applications
-export const getStudentApplications = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/applications/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch student applications");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get student applications error:", error);
-    throw error;
-  }
-};
-
-// Student onboarding steps
-export const getStudentOnboardingSteps = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    const response = await fetch(`http://localhost:8000/api/student/onboarding-steps/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch onboarding steps");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Get onboarding steps error:", error);
+    console.error(`API Error (${endpoint}):`, error);
     throw error;
   }
 };
@@ -252,15 +34,12 @@ export const isAuthenticated = async () => {
   
   try {
     // Validate the token with the backend
-    const response = await fetch("http://localhost:8000/api/auth/me", {
+    const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
-    if (!response.ok) return false;
-    
-    const data = await response.json();
     return data && data.role === "admin";
   } catch (error) {
     console.error("Auth check error:", error);
@@ -274,15 +53,12 @@ export const isStudentAuthenticated = async () => {
   
   try {
     // Validate the token with the backend
-    const response = await fetch("http://localhost:8000/api/auth/me", {
+    const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
-    if (!response.ok) return false;
-    
-    const data = await response.json();
     return data && data.role === "student";
   } catch (error) {
     console.error("Student auth check error:", error);
@@ -296,15 +72,12 @@ export const isProcessingAuthenticated = async () => {
   
   try {
     // Validate the token with the backend
-    const response = await fetch("http://localhost:8000/api/auth/me", {
+    const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     
-    if (!response.ok) return false;
-    
-    const data = await response.json();
     return data && data.role === "processing";
   } catch (error) {
     console.error("Processing auth check error:", error);
@@ -316,7 +89,7 @@ export const adminLogin = async (email: string, password: string) => {
   try {
     console.log("Attempting admin login for:", email);
     
-    const response = await fetch("http://localhost:8000/api/auth/token", {
+    const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -356,30 +129,10 @@ export const adminLogin = async (email: string, password: string) => {
 
 export const registerAdmin = async (userData: any) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/register/admin", {
+    return await fetchAPI("/auth/register/admin", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(userData),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (errorData.detail && typeof errorData.detail === 'string') {
-        if (errorData.detail.includes("duplicate key")) {
-          throw new Error("Email already in use");
-        } else if (errorData.detail.includes("Invalid admin secret key")) {
-          throw new Error("Invalid admin secret key");
-        } else {
-          throw new Error(errorData.detail);
-        }
-      } else {
-        throw new Error("Failed to register admin");
-      }
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Admin registration error:", error);
     throw error;
@@ -388,7 +141,7 @@ export const registerAdmin = async (userData: any) => {
 
 export const processingLogin = async (email: string, password: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/token", {
+    const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -422,7 +175,7 @@ export const processingLogin = async (email: string, password: string) => {
 
 export const studentLogin = async (email: string, password: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/auth/token", {
+    const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -469,22 +222,221 @@ export const logoutStudent = () => {
   localStorage.removeItem("studentUser");
 };
 
-// Contact & Consultation
-export const submitContactForm = async (formData: any) => {
+export const registerProcessingMember = async (userData: any) => {
+  const token = localStorage.getItem("adminToken");
+  
+  if (!token) {
+    throw new Error("Admin authentication required");
+  }
+  
   try {
-    const response = await fetch("http://localhost:8000/api/contact", {
+    console.log("Registering processing team member:", userData);
+    
+    return await fetchAPI("/auth/processing/register", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
-      body: JSON.stringify(formData),
+      body: JSON.stringify({
+        ...userData,
+        admin_token: token,
+      }),
+    });
+  } catch (error) {
+    console.error("Register processing member error:", error);
+    throw error;
+  }
+};
+
+// Student functions
+export const getStudentRecommendations = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/recommendations/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student recommendations error:", error);
+    throw error;
+  }
+};
+
+export const generateStudentRecommendation = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/recommendations/generate/${studentId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Generate student recommendation error:", error);
+    throw error;
+  }
+};
+
+export const getStudentDetails = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/profile/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student details error:", error);
+    throw error;
+  }
+};
+
+// Student profile
+export const getStudentProfile = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/profile/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student profile error:", error);
+    throw error;
+  }
+};
+
+export const updateStudentProfile = async (studentId: string, profileData: any) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/profile/${studentId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+  } catch (error) {
+    console.error("Update student profile error:", error);
+    throw error;
+  }
+};
+
+// Student education
+export const getStudentEducation = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/education/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student education error:", error);
+    throw error;
+  }
+};
+
+// Student documents
+export const getStudentDocuments = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/documents/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student documents error:", error);
+    throw error;
+  }
+};
+
+export const getRequiredDocuments = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/documents/required/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get required documents error:", error);
+    throw error;
+  }
+};
+
+export const uploadDocument = async (formData: FormData) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
     });
 
     if (!response.ok) {
-      throw new Error("Failed to submit contact form");
+      throw new Error("Failed to upload document");
     }
 
     return await response.json();
+  } catch (error) {
+    console.error("Upload document error:", error);
+    throw error;
+  }
+};
+
+// Student applications
+export const getStudentApplications = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/applications/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student applications error:", error);
+    throw error;
+  }
+};
+
+// Student onboarding steps
+export const getStudentOnboardingSteps = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/student/onboarding-steps/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get onboarding steps error:", error);
+    throw error;
+  }
+};
+
+// Contact & Consultation
+export const submitContactForm = async (formData: any) => {
+  try {
+    return await fetchAPI("/contact", {
+      method: "POST",
+      body: JSON.stringify(formData),
+    });
   } catch (error) {
     console.error("Contact form submission error:", error);
     throw error;
@@ -509,19 +461,10 @@ export interface ConsultationBookingData {
 
 export const submitConsultationBooking = async (formData: ConsultationBookingData) => {
   try {
-    const response = await fetch("http://localhost:8000/api/consultation", {
+    return await fetchAPI("/consultation", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(formData),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to book consultation");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Consultation booking error:", error);
     throw error;
@@ -549,17 +492,11 @@ export const getConsultations = async () => {
   const token = localStorage.getItem("adminToken");
   
   try {
-    const response = await fetch("http://localhost:8000/api/consultations", {
+    return await fetchAPI("/consultations", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch consultations");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Get consultations error:", error);
     throw error;
@@ -570,58 +507,15 @@ export const updateConsultationStatus = async (consultationId: string, status: s
   const token = localStorage.getItem("adminToken");
   
   try {
-    const response = await fetch(`http://localhost:8000/api/consultations/${consultationId}/status`, {
+    return await fetchAPI(`/consultations/${consultationId}/status`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
       },
       body: JSON.stringify({ status }),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to update consultation status");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Update consultation status error:", error);
-    throw error;
-  }
-};
-
-// Processing team
-export const registerProcessingMember = async (userData: any) => {
-  const token = localStorage.getItem("adminToken");
-  
-  if (!token) {
-    throw new Error("Admin authentication required");
-  }
-  
-  try {
-    console.log("Registering processing team member:", userData);
-    
-    const response = await fetch("http://localhost:8000/api/auth/processing/register", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...userData,
-        admin_token: token,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Registration failed:", response.status, errorData);
-      throw new Error(errorData.detail || "Failed to register processing team member");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Register processing member error:", error);
     throw error;
   }
 };
@@ -630,17 +524,11 @@ export const getAllStudents = async () => {
   const token = localStorage.getItem("processingToken");
   
   try {
-    const response = await fetch("http://localhost:8000/api/processing/students", {
+    return await fetchAPI("/processing/students", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch students");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Get all students error:", error);
     throw error;
@@ -651,20 +539,13 @@ export const createStudentApplication = async (studentId: string, applicationDat
   const token = localStorage.getItem("processingToken");
   
   try {
-    const response = await fetch(`http://localhost:8000/api/processing/students/${studentId}/applications`, {
+    return await fetchAPI(`/processing/students/${studentId}/applications`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
       },
       body: JSON.stringify(applicationData),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to create student application");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Create student application error:", error);
     throw error;
@@ -683,19 +564,10 @@ export interface ChatMessage {
 
 export const sendChatMessage = async (message: string) => {
   try {
-    const response = await fetch("http://localhost:8000/api/chat/messages", {
+    return await fetchAPI("/chat/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ message }),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to send message");
-    }
-
-    return await response.json();
   } catch (error) {
     console.error("Send chat message error:", error);
     throw error;

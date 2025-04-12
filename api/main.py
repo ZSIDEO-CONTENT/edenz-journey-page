@@ -2,7 +2,13 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from api.routers import auth, students, documents, recommendations, consultations, chat, questionnaires, processing
+from api.db import initialize_database
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="Edenz API", version="1.0.0")
@@ -15,6 +21,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_db_client():
+    try:
+        logger.info("Initializing database...")
+        initialize_database()
+        logger.info("Database initialization complete")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Continue running the app even if DB init fails
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
