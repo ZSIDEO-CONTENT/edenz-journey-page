@@ -142,3 +142,4 @@ AUTH_USER_MODEL = 'api.User'
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development - restrict this in production
 CORS_ALLOW_CREDENTIALS = True
+APPEND_SLASH = False
