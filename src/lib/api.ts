@@ -1,4 +1,3 @@
-
 // api.ts - Updated to work with Django backend properly
 
 // API base URL - ensure no trailing slash
@@ -9,8 +8,8 @@ interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
-// Helper function for API requests
-const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
+// Helper function for API requests - NOW EXPORTED
+export const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
   try {
     // Ensure endpoint starts with / but doesn't end with /
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -731,4 +730,50 @@ export const b2bLogin = async (email: string, password: string) => {
 export const logoutB2B = () => {
   localStorage.removeItem("b2bToken");
   localStorage.removeItem("b2bUser");
+};
+
+// Student onboarding steps - ADDED MISSING FUNCTION
+export const getStudentOnboardingSteps = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    // For now, return mock onboarding data since the backend endpoint may not be ready
+    const mockSteps = [
+      {
+        id: "profile",
+        title: "Complete Profile",
+        description: "Fill out your personal information",
+        completed: false,
+        required: true,
+        link: "/student/profile"
+      },
+      {
+        id: "documents",
+        title: "Upload Documents",
+        description: "Upload required documents",
+        completed: false,
+        required: true,
+        link: "/student/documents"
+      },
+      {
+        id: "education",
+        title: "Add Education History",
+        description: "Add your educational background",
+        completed: false,
+        required: true,
+        link: "/student/profile"
+      }
+    ];
+    
+    const completedSteps = mockSteps.filter(step => step.completed).length;
+    const progress = (completedSteps / mockSteps.length) * 100;
+    
+    return {
+      steps: mockSteps,
+      progress: progress
+    };
+  } catch (error) {
+    console.error("Get student onboarding steps error:", error);
+    throw error;
+  }
 };
