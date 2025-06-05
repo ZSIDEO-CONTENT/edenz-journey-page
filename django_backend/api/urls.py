@@ -7,7 +7,8 @@ from .views import (
     UserViewSet, EducationViewSet, DocumentViewSet, ApplicationViewSet, 
     ConsultationViewSet, QuestionnaireViewSet, QuestionnaireResponseViewSet,
     DestinationGuideViewSet, DestinationDocumentViewSet, DestinationFAQViewSet,
-    StudentSubscriptionViewSet, ChatView, CurrentUserView, RecommendationsView
+    StudentSubscriptionViewSet, ChatView, CurrentUserView, RecommendationsView,
+    B2BRegisterView, B2BUsersViewSet
 )
 
 # Create a router for ViewSets
@@ -23,6 +24,7 @@ router.register(r'destination-guides', DestinationGuideViewSet)
 router.register(r'destination-documents', DestinationDocumentViewSet)
 router.register(r'destination-faqs', DestinationFAQViewSet)
 router.register(r'student-subscriptions', StudentSubscriptionViewSet)
+router.register(r'b2b-users', B2BUsersViewSet)
 
 urlpatterns = [
     # Authentication endpoints
@@ -30,6 +32,7 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/register/student/', RegisterView.as_view(), name='register'),
     path('auth/register/admin/', AdminRegisterView.as_view(), name='admin_register'),
+    path('auth/register/b2b/', B2BRegisterView.as_view(), name='b2b_register'),
     path('auth/processing/register/', ProcessingMemberRegisterView.as_view(), name='processing_register'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     

@@ -1,176 +1,276 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getConsultations, updateConsultationStatus, isAuthenticated, logout, Consultation } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Users, 
+  FileText, 
+  Calendar, 
+  Settings, 
+  LogOut,
+  Plus,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { logout, getConsultations, updateConsultationStatus } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, Mail, Phone, User } from "lucide-react";
+import BackendHealthCheck from "@/components/BackendHealthCheck";
+
+interface Consultation {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  date: string;
+  time: string;
+  consultationType: string;
+  destination: string;
+  notes: string;
+  status: string;
+  createdAt: string;
+  message?: string;
+  created_at?: string;
+}
 
 const AdminDashboard = () => {
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication
-    if (!isAuthenticated()) {
-      navigate("/admin/login");
-      return;
-    }
+    loadConsultations();
+  }, []);
 
-    // Load consultations
-    fetchConsultations();
-  }, [navigate]);
-
-  const fetchConsultations = async () => {
-    setIsLoading(true);
+  const loadConsultations = async () => {
     try {
       const data = await getConsultations();
-      setConsultations(data);
+      setConsultations(data || []);
     } catch (error) {
-      console.error("Error fetching consultations:", error);
+      console.error("Failed to load consultations:", error);
       toast({
         title: "Error",
-        description: "Failed to load consultations. Please try again.",
+        description: "Failed to load consultations",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (consultationId: string, status: string) => {
-    try {
-      await updateConsultationStatus(consultationId, status);
-      
-      // Update local state
-      setConsultations(prev => 
-        prev.map(consultation => 
-          consultation.id === consultationId 
-            ? { ...consultation, status: status } 
-            : consultation
-        )
-      );
-      
-      toast({
-        title: "Status updated",
-        description: `Consultation status changed to ${status}`,
-      });
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update status. Please try again.",
-        variant: "destructive",
-      });
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate("/admin/login");
+    navigate("/");
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "Not specified";
-    return dateString;
+  const handleStatusUpdate = async (consultationId: string, newStatus: string) => {
+    try {
+      await updateConsultationStatus(consultationId, newStatus);
+      await loadConsultations(); // Reload data
+      toast({
+        title: "Success",
+        description: "Consultation status updated",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { variant: "secondary" as const, icon: Clock },
+      confirmed: { variant: "default" as const, icon: CheckCircle },
+      completed: { variant: "outline" as const, icon: CheckCircle },
+      cancelled: { variant: "destructive" as const, icon: AlertCircle },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {status}
+      </Badge>
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Edenz Admin Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Consultation Bookings</h2>
-          <Button onClick={fetchConsultations} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Refresh"}
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="spinner"></div>
-            <p className="mt-4 text-gray-600">Loading consultations...</p>
+      <div className="border-b bg-white">
+        <div className="flex h-16 items-center px-6">
+          <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+          <div className="ml-auto flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/admin/register-processing")}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Processing Team Member
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           </div>
-        ) : consultations.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-600">No consultations found</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {consultations.map((consultation) => (
-              <Card key={consultation.id} className="overflow-hidden">
-                <CardHeader className={`
-                  ${consultation.status === 'pending' ? 'bg-yellow-50' : ''}
-                  ${consultation.status === 'confirmed' ? 'bg-green-50' : ''}
-                  ${consultation.status === 'completed' ? 'bg-blue-50' : ''}
-                  ${consultation.status === 'cancelled' ? 'bg-red-50' : ''}
-                `}>
-                  <CardTitle className="flex justify-between items-center">
-                    <span>Consultation</span>
-                    <Select
-                      defaultValue={consultation.status}
-                      onValueChange={(value) => handleStatusChange(consultation.id, value)}
-                    >
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CardTitle>
+        </div>
+      </div>
+
+      <div className="p-6">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="consultations">Consultations</TabsTrigger>
+            <TabsTrigger value="health-check">Backend Health</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Consultations</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">{consultation.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-500" />
-                      <span>{consultation.email}</span>
-                    </div>
-                    {consultation.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span>{consultation.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span>{formatDate(consultation.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span>{consultation.time || "Not specified"}</span>
-                    </div>
-                    {consultation.message && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm text-gray-600">{consultation.message}</p>
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500 mt-2">
-                      Booked on: {new Date(consultation.createdAt || consultation.created_at || '').toLocaleString()}
-                    </div>
+                <CardContent>
+                  <div className="text-2xl font-bold">{consultations.length}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Consultations</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {consultations.filter(c => c.status === 'pending').length}
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
-      </main>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">-</div>
+                  <p className="text-xs text-muted-foreground">Connect backend to view</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Processing Team</CardTitle>
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">-</div>
+                  <p className="text-xs text-muted-foreground">Connect backend to view</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="consultations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Consultations</CardTitle>
+                <CardDescription>
+                  Manage and track consultation requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-4">Loading consultations...</div>
+                ) : consultations.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No consultations found
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {consultations.map((consultation) => (
+                      <div key={consultation.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-medium">{consultation.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {consultation.email} • {consultation.phone}
+                            </p>
+                            <p className="text-sm">
+                              {consultation.consultationType} • {consultation.destination}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {consultation.date} at {consultation.time}
+                            </p>
+                            {consultation.message && (
+                              <p className="text-sm mt-2 p-2 bg-gray-50 rounded">
+                                {consultation.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(consultation.status)}
+                            <select
+                              value={consultation.status}
+                              onChange={(e) => handleStatusUpdate(consultation.id, e.target.value)}
+                              className="text-sm border rounded px-2 py-1"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="health-check" className="space-y-6">
+            <BackendHealthCheck />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+                <CardDescription>
+                  Configure system-wide settings and preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Button
+                    onClick={() => navigate("/admin/register-processing")}
+                    className="w-full justify-start"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Register Processing Team Member
+                  </Button>
+                  
+                  <div className="text-sm text-muted-foreground">
+                    More settings will be available once the backend is fully connected.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
