@@ -394,13 +394,48 @@ export const getStudentDocuments = async (studentId: string) => {
 
 export const getRequiredDocuments = async () => {
   try {
-    // Return mock required documents for now
+    // Return mock required documents with proper structure
     return [
-      { id: 1, name: "Passport", required: true, uploaded: false },
-      { id: 2, name: "Academic Transcripts", required: true, uploaded: false },
-      { id: 3, name: "English Language Test", required: true, uploaded: false },
-      { id: 4, name: "Statement of Purpose", required: true, uploaded: false },
-      { id: 5, name: "Letters of Recommendation", required: false, uploaded: false }
+      { 
+        id: 1, 
+        name: "Passport", 
+        required: true, 
+        uploaded: false,
+        type: "passport",
+        description: "Valid passport for international travel"
+      },
+      { 
+        id: 2, 
+        name: "Academic Transcripts", 
+        required: true, 
+        uploaded: false,
+        type: "academic_transcript",
+        description: "Official transcripts from your educational institution"
+      },
+      { 
+        id: 3, 
+        name: "English Language Test", 
+        required: true, 
+        uploaded: false,
+        type: "ielts",
+        description: "IELTS, TOEFL, or other English proficiency test results"
+      },
+      { 
+        id: 4, 
+        name: "Statement of Purpose", 
+        required: true, 
+        uploaded: false,
+        type: "personal_statement",
+        description: "Personal statement explaining your academic goals"
+      },
+      { 
+        id: 5, 
+        name: "Letters of Recommendation", 
+        required: false, 
+        uploaded: false,
+        type: "recommendation_letter",
+        description: "Academic or professional recommendation letters"
+      }
     ];
   } catch (error) {
     console.error("Get required documents error:", error);
