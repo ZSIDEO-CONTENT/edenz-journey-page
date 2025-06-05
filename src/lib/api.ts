@@ -1,7 +1,6 @@
+// api.ts - Updated to work with Django backend properly
 
-// api.ts - Updated to work with PostgreSQL backend
-
-// API base URL
+// API base URL - ensure no trailing slash
 const API_BASE_URL = "http://localhost:8000/api";
 
 // Define proper types for fetch options
@@ -12,7 +11,15 @@ interface FetchOptions extends RequestInit {
 // Helper function for API requests
 const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Ensure endpoint starts with / but doesn't end with /
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const finalEndpoint = cleanEndpoint.endsWith('/') && cleanEndpoint.length > 1 
+      ? cleanEndpoint.slice(0, -1) 
+      : cleanEndpoint;
+
+    console.log(`Making API call to: ${API_BASE_URL}${finalEndpoint}`);
+    
+    const response = await fetch(`${API_BASE_URL}${finalEndpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -22,7 +29,8 @@ const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+      console.error(`API Error (${response.status}):`, errorData);
+      throw new Error(errorData.detail || errorData.message || `Request failed with status ${response.status}`);
     }
     
     return await response.json();
@@ -38,7 +46,6 @@ export const isAuthenticated = async () => {
   if (!token) return false;
   
   try {
-    // Validate the token with the backend
     const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -48,6 +55,8 @@ export const isAuthenticated = async () => {
     return data && data.role === "admin";
   } catch (error) {
     console.error("Auth check error:", error);
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
     return false;
   }
 };
@@ -57,7 +66,6 @@ export const isStudentAuthenticated = async () => {
   if (!token) return false;
   
   try {
-    // Validate the token with the backend
     const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -67,6 +75,8 @@ export const isStudentAuthenticated = async () => {
     return data && data.role === "student";
   } catch (error) {
     console.error("Student auth check error:", error);
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentUser");
     return false;
   }
 };
@@ -76,7 +86,6 @@ export const isProcessingAuthenticated = async () => {
   if (!token) return false;
   
   try {
-    // Validate the token with the backend
     const data = await fetchAPI("/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -86,6 +95,8 @@ export const isProcessingAuthenticated = async () => {
     return data && data.role === "processing";
   } catch (error) {
     console.error("Processing auth check error:", error);
+    localStorage.removeItem("processingToken");
+    localStorage.removeItem("processingUser");
     return false;
   }
 };
@@ -115,13 +126,11 @@ export const adminLogin = async (email: string, password: string) => {
     const data = await response.json();
     console.log("Login response:", data);
     
-    // Check if the user has admin role
     if (!data.user || data.user.role !== "admin") {
       console.error("Not authorized as admin. User role:", data.user?.role);
       throw new Error("Not authorized as admin");
     }
     
-    // Save token and user data to localStorage
     localStorage.setItem("adminToken", data.access_token);
     localStorage.setItem("adminUser", JSON.stringify(data.user));
     
@@ -159,12 +168,12 @@ export const processingLogin = async (email: string, password: string) => {
     });
 
     if (!response.ok) {
-      throw new Error("Login failed");
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Login failed");
     }
 
     const data = await response.json();
     
-    // Check if the user has processing role
     if (data.user.role !== "processing") {
       throw new Error("Not authorized as processing team member");
     }
@@ -193,12 +202,12 @@ export const studentLogin = async (email: string, password: string) => {
     });
 
     if (!response.ok) {
-      throw new Error("Login failed");
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Login failed");
     }
 
     const data = await response.json();
     
-    // Check if the user has student role
     if (data.user.role !== "student") {
       throw new Error("Not authorized as student");
     }
