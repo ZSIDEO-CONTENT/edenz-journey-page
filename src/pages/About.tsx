@@ -5,13 +5,13 @@ import { Users, Award, GraduationCap } from 'lucide-react';
 
 const About = () => {
   return (
-    <div className="relative overflow-hidden w-full">
+    <div className="w-full min-h-screen overflow-x-hidden">
       <Navbar />
       <main className="w-full">
         {/* CEO Section */}
         <section className="pt-32 pb-20 w-full">
-          <div className="container mx-auto px-4 w-full">
-            <div className="max-w-6xl mx-auto">
+          <div className="w-full px-4">
+            <div className="w-full max-w-7xl mx-auto">
               <div className="text-center mb-16">
                 <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
                   Leadership
@@ -24,7 +24,7 @@ const About = () => {
                 </p>
               </div>
               
-              <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+              <div className="bg-white rounded-3xl shadow-xl overflow-hidden w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
                   <div className="relative h-96 lg:h-auto">
                     <img 
@@ -72,48 +72,50 @@ const About = () => {
 
         {/* Our Values Section */}
         <section className="py-20 bg-edenz-light/30 w-full">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                Our Values
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                What Drives Us Every Day
-              </h2>
-              <p className="text-gray-600 text-lg">
-                At Edenz Consultant, our core values guide every interaction and decision we make while helping students navigate their international education journey.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in">
-                <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
-                  <Users className="h-6 w-6" />
+          <div className="w-full px-4">
+            <div className="max-w-7xl mx-auto">
+              <div className="max-w-3xl mx-auto text-center mb-16">
+                <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
+                  Our Values
                 </div>
-                <h3 className="text-xl font-bold mb-3">Student-First Approach</h3>
-                <p className="text-gray-600">
-                  We prioritize your goals and aspirations, tailoring our guidance to your unique academic background and career plans.
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                  What Drives Us Every Day
+                </h2>
+                <p className="text-gray-600 text-lg">
+                  At Edenz Consultant, our core values guide every interaction and decision we make while helping students navigate their international education journey.
                 </p>
               </div>
               
-              <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '150ms' }}>
-                <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
-                  <Award className="h-6 w-6" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in">
+                  <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">Student-First Approach</h3>
+                  <p className="text-gray-600">
+                    We prioritize your goals and aspirations, tailoring our guidance to your unique academic background and career plans.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3">Excellence & Integrity</h3>
-                <p className="text-gray-600">
-                  We uphold the highest standards of professionalism and ethical conduct in all our operations and student interactions.
-                </p>
-              </div>
-              
-              <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '300ms' }}>
-                <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
-                  <GraduationCap className="h-6 w-6" />
+                
+                <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '150ms' }}>
+                  <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
+                    <Award className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">Excellence & Integrity</h3>
+                  <p className="text-gray-600">
+                    We uphold the highest standards of professionalism and ethical conduct in all our operations and student interactions.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3">Continuous Learning</h3>
-                <p className="text-gray-600">
-                  We constantly update our knowledge about global education trends, university requirements, and visa regulations.
-                </p>
+                
+                <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '300ms' }}>
+                  <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
+                    <GraduationCap className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">Continuous Learning</h3>
+                  <p className="text-gray-600">
+                    We constantly update our knowledge about global education trends, university requirements, and visa regulations.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
