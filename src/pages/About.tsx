@@ -127,62 +127,64 @@ const About = () => {
           </div>
         </section>
 
-        {/* Team Section */}
+        {/* CEO Section */}
         <section className="py-20 bg-edenz-light/30">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                Meet Our Team
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-16">
+                <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
+                  Leadership
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                  Meet Our CEO
+                </h2>
+                <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+                  Leading Edenz Consultant with vision, expertise, and a commitment to student success in international education.
+                </p>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Dedicated Education Experts
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Our team consists of experienced education consultants, many of whom have studied abroad themselves and understand the journey firsthand.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                {
-                  name: "Ahmed Khan",
-                  position: "Founder & CEO",
-                  image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-                },
-                {
-                  name: "Fatima Rizvi",
-                  position: "Head Counselor",
-                  image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-                },
-                {
-                  name: "Zain Malik",
-                  position: "Visa Specialist",
-                  image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-                },
-                {
-                  name: "Ayesha Ahmed",
-                  position: "IELTS Instructor",
-                  image: "https://images.unsplash.com/photo-1619422586083-facf9e26e672?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=686&q=80"
-                }
-              ].map((member, index) => (
-                <div 
-                  key={index} 
-                  className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${index * 150}ms` }}
-                >
-                  <div className="h-64 relative">
+              
+              <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                  <div className="relative h-96 lg:h-auto">
                     <img 
-                      src={member.image} 
-                      alt={member.name} 
+                      src="/lovable-uploads/ddb0bc44-b0f9-47fb-b0be-f26b900dea36.png" 
+                      alt="Dr. Taimoor Ali Ahmad - CEO" 
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent lg:hidden"></div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold mb-1">{member.name}</h3>
-                    <p className="text-gray-600">{member.position}</p>
+                  
+                  <div className="p-8 lg:p-12 flex flex-col justify-center">
+                    <h3 className="text-3xl font-bold mb-2">Dr. Taimoor Ali Ahmad</h3>
+                    <p className="text-primary font-semibold text-lg mb-6">Founder & CEO</p>
+                    
+                    <div className="space-y-4 text-gray-600">
+                      <p>
+                        Dr. Taimoor Ali Ahmad is the visionary founder and CEO of Edenz Consultant, with over two decades of experience in international education consulting. His passion for helping Pakistani students achieve their global education dreams has been the driving force behind Edenz Consultant's success.
+                      </p>
+                      
+                      <p>
+                        Under his leadership, Edenz Consultant has successfully guided thousands of students to prestigious universities across the globe. Dr. Ahmad's deep understanding of international education systems and visa processes has made him a trusted advisor for students and parents alike.
+                      </p>
+                      
+                      <p>
+                        His commitment to excellence and student-first approach continues to shape Edenz Consultant's mission of making quality international education accessible to Pakistani students.
+                      </p>
+                    </div>
+                    
+                    <div className="mt-8 grid grid-cols-2 gap-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-primary">20+</div>
+                        <div className="text-sm text-gray-600">Years Experience</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-primary">5000+</div>
+                        <div className="text-sm text-gray-600">Students Guided</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </section>

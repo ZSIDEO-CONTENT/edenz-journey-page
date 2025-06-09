@@ -6,7 +6,7 @@ import { MessageCircle, Send, Search, BookOpen, Globe, GraduationCap, Sparkles, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { sendChatMessage, ChatMessage } from '@/lib/api';
+import { sendChatMessage } from '@/lib/chatService';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,7 +14,7 @@ const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{sender: string, content: string}[]>([
-    { content: 'Hello! I am Edenz AI. How can I help you with your study abroad journey today?', sender: 'bot' }
+    { content: 'Hello! I am Edenz AI Assistant. How can I help you with your study abroad journey today?', sender: 'bot' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
@@ -24,10 +24,10 @@ const Chat = () => {
 
   // Loading stages for a more engaging experience
   const loadingStages = [
-    { text: "Searching global education database...", icon: <Search className="animate-pulse" /> },
-    { text: "Analyzing best options for you...", icon: <BookOpen className="animate-bounce" /> },
-    { text: "Checking visa requirements...", icon: <GraduationCap className="animate-spin" /> },
-    { text: "Preparing personalized response...", icon: <Bot className="animate-pulse" /> }
+    { text: "Analyzing your query...", icon: <Search className="animate-pulse" /> },
+    { text: "Searching education database...", icon: <BookOpen className="animate-bounce" /> },
+    { text: "Finding best recommendations...", icon: <GraduationCap className="animate-spin" /> },
+    { text: "Preparing response...", icon: <Bot className="animate-pulse" /> }
   ];
 
   // Auto-scroll to bottom of messages
@@ -74,12 +74,13 @@ const Chat = () => {
     setMessages(prev => [...prev, userMessage]);
     
     // Clear input and set loading
+    const currentMessage = message;
     setMessage('');
     setIsLoading(true);
     
     try {
-      // Send message to API with session ID if available
-      const response = await sendChatMessage(message);
+      // Send message to our chat service
+      const response = await sendChatMessage(currentMessage);
       
       // Store the session ID for future messages
       if (response.session_id && !sessionId) {
@@ -96,8 +97,8 @@ const Chat = () => {
       if (response.action === "booking_intent") {
         setTimeout(() => {
           toast({
-            title: "Booking Available",
-            description: "Would you like to book a consultation with our experts?",
+            title: "Ready to Book?",
+            description: "Schedule a consultation with our expert counselors for personalized guidance.",
             action: (
               <Button 
                 onClick={handleBookingRedirect}
@@ -117,13 +118,13 @@ const Chat = () => {
       
       // Add error message
       setMessages(prev => [...prev, { 
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again later or contact us directly through the contact form.",
+        content: "I'm sorry, I'm having trouble processing your request right now. Please try again or contact us directly for assistance.",
         sender: 'bot'
       }]);
       
       toast({
         title: "Connection Error",
-        description: "Couldn't connect to the chat server. Please try again later.",
+        description: "Couldn't process your message. Please try again.",
         variant: "destructive"
       });
       
@@ -132,31 +133,31 @@ const Chat = () => {
   };
 
   const handleBookingRedirect = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     navigate('/book-consultation');
   };
 
   // Process messages to add booking button when appropriate
   const processMessage = (content: string) => {
-    // Format the message for better readability - replace markdown formatting
+    // Format the message for better readability
     let formattedContent = content
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') // Convert bold markers to HTML
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')   // Convert italic markers to HTML
-      .split('\n').map(line => line.trim()).filter(Boolean).join('<br/>'); // Proper line breaks
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .split('\n').map(line => line.trim()).filter(Boolean).join('<br/>');
     
     // If message contains booking suggestions, add a booking button
-    if (content.toLowerCase().includes('book') || 
-        content.toLowerCase().includes('consultation') ||
-        content.toLowerCase().includes('advisor') ||
-        content.toLowerCase().includes('expert')) {
+    if (content.toLowerCase().includes('consultation') || 
+        content.toLowerCase().includes('book') ||
+        content.toLowerCase().includes('schedule')) {
       return (
         <div>
           <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formattedContent }}></div>
-          <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20 animate-pulse">
+          <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
             <div className="flex items-center mb-2">
               <Sparkles className="h-4 w-4 mr-2 text-yellow-500" />
-              <p className="font-medium text-primary">Premium Consultation Available</p>
+              <p className="font-medium text-primary">Expert Consultation Available</p>
             </div>
-            <p className="mb-2 text-sm text-gray-600">Get personalized guidance from our expert consultants</p>
+            <p className="mb-2 text-sm text-gray-600">Get personalized guidance from our expert counselors</p>
             <div className="flex items-center justify-between">
               <p className="font-bold text-primary">Fee: 5000 PKR</p>
               <Button
@@ -164,7 +165,7 @@ const Chat = () => {
                 size="sm"
                 className="bg-primary text-white transition-all duration-300 hover:scale-105"
               >
-                Book Paid Consultation
+                Book Consultation
               </Button>
             </div>
           </div>
@@ -223,7 +224,7 @@ const Chat = () => {
                         <Progress value={progressValue} className="h-2 mb-2" />
                         <div className="flex items-center text-xs text-gray-500">
                           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          <span>Finding the best information for you...</span>
+                          <span>Processing your request...</span>
                         </div>
                       </div>
                     </div>
@@ -235,7 +236,7 @@ const Chat = () => {
               <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2 bg-white">
                 <Input
                   type="text"
-                  placeholder="Type your message..."
+                  placeholder="Ask about studying abroad, visa requirements, test prep..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="flex-1 focus:ring-2 focus:ring-primary/50 transition-all duration-300"
@@ -254,14 +255,14 @@ const Chat = () => {
               <div className="bg-gradient-to-r from-primary/5 to-blue-50 border-t p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <GraduationCap className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium text-gray-700">Want personalized guidance from our experts?</span>
+                  <span className="text-sm font-medium text-gray-700">Need expert guidance from our counselors?</span>
                 </div>
                 <Button
                   onClick={handleBookingRedirect}
                   className="bg-primary text-white transition-all duration-300 hover:scale-105"
                   size="sm"
                 >
-                  Book a Consultation (5000 PKR)
+                  Book Expert Consultation (5000 PKR)
                 </Button>
               </div>
             </div>

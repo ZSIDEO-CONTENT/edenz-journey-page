@@ -27,7 +27,7 @@ const destinations = [
   {
     id: 4,
     name: 'Canada',
-    image: 'https://www.shutterstock.com/image-photo/beautiful-aerial-view-downtown-vancouver-600nw-2244151975.jpg',
+    image: 'https://images.unsplash.com/photo-1569681157442-5cd435fbcd65',
     universities: 30,
     courses: 2500
   },
@@ -48,7 +48,7 @@ const destinations = [
   {
     id: 7,
     name: 'Ireland',
-    image: 'https://media.istockphoto.com/id/641736118/photo/houses-and-catherdral-in-cobh-ireland.jpg?s=612x612&w=0&k=20&c=dTQbo6doEK9vJyW1MnOy67q-WtH8Odnkd1SY0UpNgV0=',
+    image: 'https://images.unsplash.com/photo-1590736969955-71cc94901144',
     universities: 22,
     courses: 1500
   },
@@ -59,9 +59,41 @@ const destinations = [
     universities: 18,
     courses: 1200
   },
+  {
+    id: 9,
+    name: 'France',
+    image: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52',
+    universities: 35,
+    courses: 2200
+  },
+  {
+    id: 10,
+    name: 'Netherlands',
+    image: 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017',
+    universities: 28,
+    courses: 1900
+  },
+  {
+    id: 11,
+    name: 'Switzerland',
+    image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4',
+    universities: 12,
+    courses: 800
+  },
+  {
+    id: 12,
+    name: 'Norway',
+    image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e',
+    universities: 15,
+    courses: 900
+  }
 ];
 
 const Destinations = () => {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <section className="py-20">
       <div className="container mx-auto px-4">
@@ -103,7 +135,7 @@ const Destinations = () => {
                 </div>
               </div>
               <div className="p-4 bg-white">
-                <Link to="/countries">
+                <Link to="/countries" onClick={scrollToTop}>
                   <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
                     Explore
                   </Button>
@@ -114,7 +146,7 @@ const Destinations = () => {
         </div>
         
         <div className="text-center mt-10">
-          <Link to="/countries">
+          <Link to="/countries" onClick={scrollToTop}>
             <Button className="btn-primary">
               View All Destinations
             </Button>
