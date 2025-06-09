@@ -1,6 +1,9 @@
 
+import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
 
 const TermsOfService = () => {
   return (
@@ -10,7 +13,15 @@ const TermsOfService = () => {
         <section className="pt-32 pb-20">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              <h1 className="text-4xl md:text-5xl font-bold mb-8">Terms of Service</h1>
+              <div className="mb-8">
+                <Link to="/">
+                  <Button variant="outline" className="mb-6">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Home
+                  </Button>
+                </Link>
+                <h1 className="text-4xl md:text-5xl font-bold mb-8">Terms of Service</h1>
+              </div>
               <div className="prose prose-lg max-w-none">
                 <p className="text-gray-600 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
                 

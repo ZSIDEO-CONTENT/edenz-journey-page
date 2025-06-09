@@ -27,11 +27,6 @@ const Footer = () => {
                 <Instagram className="h-5 w-5" />
               </a>
             </div>
-            <div className="mt-4">
-              <Link to="/" onClick={scrollToTop} className="text-primary hover:text-primary/80 transition-colors">
-                Back to Home
-              </Link>
-            </div>
           </div>
           
           <div>
