@@ -16,7 +16,7 @@ const Footer = () => {
               <span className="text-primary font-medium mr-1">Edenz</span>
               <span className="font-medium">Consultant</span>
             </div>
-            <p className="text-gray-400 mb-6">
+            <p className="text-gray-400 mb-6 text-left">
               Pakistan's leading study abroad consultancy helping students achieve their global education dreams with personalized guidance, visa processing, and test preparation.
             </p>
             <div className="flex space-x-4">
@@ -27,16 +27,11 @@ const Footer = () => {
                 <Instagram className="h-5 w-5" />
               </a>
             </div>
-            <div className="mt-4">
-              <Link to="/" onClick={scrollToTop} className="text-primary hover:text-primary/80 transition-colors">
-                Back to Home
-              </Link>
-            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-bold mb-6">Services</h3>
-            <ul className="space-y-3">
+            <h3 className="text-lg font-bold mb-6 text-left">Services</h3>
+            <ul className="space-y-3 text-left">
               <li><Link to="/services" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">University Admissions</Link></li>
               <li><Link to="/services" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">Visa Assistance</Link></li>
               <li><Link to="/services" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">IELTS Preparation</Link></li>
@@ -46,8 +41,8 @@ const Footer = () => {
           </div>
           
           <div>
-            <h3 className="text-lg font-bold mb-6">Destinations</h3>
-            <ul className="space-y-3">
+            <h3 className="text-lg font-bold mb-6 text-left">Destinations</h3>
+            <ul className="space-y-3 text-left">
               <li><Link to="/countries" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">United States</Link></li>
               <li><Link to="/countries" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">United Kingdom</Link></li>
               <li><Link to="/countries" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">Australia</Link></li>
@@ -58,11 +53,20 @@ const Footer = () => {
           </div>
           
           <div>
-            <h3 className="text-lg font-bold mb-6">Contact Us</h3>
+            <h3 className="text-lg font-bold mb-6 text-left">Contact Us</h3>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <MapPin className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
-                <span className="text-gray-400">627/B, opp. Pak Turk Muraif School, Lahore, 54000</span>
+                <div className="text-left">
+                  <a 
+                    href="https://maps.app.goo.gl/dw35KH1WUHoX6aPP7" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    627/B, opp. Pak Turk Muraif School, Lahore, 54000
+                  </a>
+                </div>
               </li>
               <li className="flex items-center">
                 <Phone className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
