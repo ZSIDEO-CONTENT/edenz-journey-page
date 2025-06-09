@@ -93,30 +93,30 @@ const Contact = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                 {/* Contact Information */}
                 <div className="space-y-8">
-                  <div>
-                    <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
-                    <p className="text-gray-600 text-lg mb-8">
+                  <div className="text-left">
+                    <h2 className="text-3xl font-bold mb-6 text-left">Get in Touch</h2>
+                    <p className="text-gray-600 text-lg mb-8 text-left">
                       Visit our office or reach out through any of the following channels. Our team is here to help you achieve your study abroad dreams.
                     </p>
                   </div>
 
                   <div className="space-y-6">
                     <div className="flex items-start space-x-4">
-                      <div className="bg-primary/10 text-primary rounded-xl p-3">
+                      <div className="bg-primary/10 text-primary rounded-xl p-3 flex-shrink-0">
                         <MapPin className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">Office Address</h3>
-                        <p className="text-gray-600">627/B, opp. Pak Turk Muraif School, Lahore, 54000</p>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg mb-1 text-left">Office Address</h3>
+                        <p className="text-gray-600 text-left">627/B, opp. Pak Turk Muraif School, Lahore, 54000</p>
                       </div>
                     </div>
 
                     <div className="flex items-start space-x-4">
-                      <div className="bg-primary/10 text-primary rounded-xl p-3">
+                      <div className="bg-primary/10 text-primary rounded-xl p-3 flex-shrink-0">
                         <Phone className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">Phone Number</h3>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg mb-1 text-left">Phone Number</h3>
                         <a href="tel:+923334229697" className="text-gray-600 hover:text-primary transition-colors">
                           +92 333 4229697
                         </a>
@@ -124,11 +124,11 @@ const Contact = () => {
                     </div>
 
                     <div className="flex items-start space-x-4">
-                      <div className="bg-primary/10 text-primary rounded-xl p-3">
+                      <div className="bg-primary/10 text-primary rounded-xl p-3 flex-shrink-0">
                         <Mail className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">Email Address</h3>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg mb-1 text-left">Email Address</h3>
                         <a href="mailto:info@edenzconsultant.org" className="text-gray-600 hover:text-primary transition-colors">
                           info@edenzconsultant.org
                         </a>
@@ -136,12 +136,12 @@ const Contact = () => {
                     </div>
 
                     <div className="flex items-start space-x-4">
-                      <div className="bg-primary/10 text-primary rounded-xl p-3">
+                      <div className="bg-primary/10 text-primary rounded-xl p-3 flex-shrink-0">
                         <Clock className="h-6 w-6" />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">Office Hours</h3>
-                        <div className="text-gray-600">
+                      <div className="text-left">
+                        <h3 className="font-semibold text-lg mb-1 text-left">Office Hours</h3>
+                        <div className="text-gray-600 text-left">
                           <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
                           <p>Saturday: 10:00 AM - 4:00 PM</p>
                           <p>Sunday: Closed</p>
@@ -270,14 +270,14 @@ const Contact = () => {
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div className="h-96 w-full">
                   <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3401.8751659302147!2d74.25847567526254!3d31.517977874194924!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39190131b1a3e2d1%3A0x7e59be2b0cd6a8d8!2s627%2FB%2C%20Opp.%20Pak%20Turk%20Muraif%20School%2C%20Lahore%2C%20Punjab%2054000%2C%20Pakistan!5e0!3m2!1sen!2s!4v1732885200000!5m2!1sen!2s"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d27215.00686531066!2d74.2405!3d31.5178!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39190131b1a3e2d1%3A0x4c76e40c74c7d7a8!2sEdenz%20Consultant%20-%20Study%20Abroad%20Consultancy!5e0!3m2!1sen!2s!4v1704718800000!5m2!1sen!2s"
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
                     allowFullScreen={true}
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
-                    title="Edenz Consultant Office Location"
+                    title="Edenz Consultant Office Location - 627/B, opp. Pak Turk Muraif School, Lahore"
                   ></iframe>
                 </div>
               </div>
