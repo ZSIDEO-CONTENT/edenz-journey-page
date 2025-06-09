@@ -22,7 +22,7 @@ const About = () => {
                 Your Trusted Study Abroad Partner in Pakistan
               </h1>
               <p className="text-gray-600 text-lg">
-                Edenz Consultant has been helping Pakistani students achieve their global education dreams since 2015. With our expert guidance and personalized approach, we've successfully placed thousands of students in prestigious universities worldwide.
+                Edenz Consultant has been helping Pakistani students achieve their global education dreams since 2003. With our expert guidance and personalized approach, we've successfully placed thousands of students in prestigious universities worldwide.
               </p>
             </div>
             
@@ -48,7 +48,7 @@ const About = () => {
                   From Lahore to the World
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Founded in 2015 in Lahore, Pakistan, Edenz Consultant began with a mission to help Pakistani students access quality education abroad. What started as a small team with big ambitions has now grown into one of Pakistan's most trusted education consultancies.
+                  Founded in 2003 in Lahore, Pakistan, Edenz Consultant began with a mission to help Pakistani students access quality education abroad. What started as a small team with big ambitions has now grown into one of Pakistan's most trusted education consultancies.
                 </p>
                 <p className="text-gray-600 mb-6">
                   We understand the unique challenges Pakistani students face when applying to international universities, from academic requirements to visa processes. Our specialized knowledge and experience have helped thousands of students overcome these challenges.

@@ -50,7 +50,6 @@ const Index = () => {
         <Features />
         <Stats />
         <Destinations />
-        <Testimonials />
         <CTA />
       </main>
       <Footer />

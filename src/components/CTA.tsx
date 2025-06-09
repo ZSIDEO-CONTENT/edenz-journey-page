@@ -22,11 +22,11 @@ const CTA = () => {
               <div className="space-y-4">
                 <div className="flex items-center text-white">
                   <Phone className="h-5 w-5 mr-3" />
-                  <span>+92 42 1234 5678</span>
+                  <span>+92 333 4228697</span>
                 </div>
                 <div className="flex items-center text-white">
                   <Mail className="h-5 w-5 mr-3" />
-                  <span>contact@edenzconsultant.org</span>
+                  <span>info@edenzconsultant.org</span>
                 </div>
               </div>
               

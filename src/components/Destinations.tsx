@@ -114,11 +114,6 @@ const Destinations = () => {
         </div>
         
         <div className="text-center mt-10">
-          <div className="max-w-3xl mx-auto mb-6">
-            <p className="text-gray-600 italic">
-              Don't see your preferred destination? We also provide consultancy services for Japan, Singapore, Malaysia, France, Italy, Spain, Netherlands, and many more countries. Contact us for personalized guidance!
-            </p>
-          </div>
           <Link to="/countries">
             <Button className="btn-primary">
               View All Destinations

@@ -40,23 +40,7 @@ const Hero = () => {
               </Link>
             </div>
             
-            <div className="flex items-center pt-5 text-gray-600">
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div 
-                    key={i} 
-                    className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center overflow-hidden transition-transform hover:scale-110 hover:z-10"
-                    style={{ animationDelay: `${i * 100}ms` }}
-                  >
-                    <span className="text-xs font-medium">{i}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="ml-4">
-                <p className="font-medium">1000+ Students</p>
-                <p className="text-sm">Trusted us for their study abroad journey</p>
-              </div>
-            </div>
+
           </div>
           
           <div className="relative animate-fade-in animation-delay-300">
