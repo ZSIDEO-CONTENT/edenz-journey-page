@@ -1,10 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { adminLogin } from "@/lib/api";
+import { adminLogin, isAuthenticated } from "@/lib/api";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,16 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   
-  // Remove automatic auth check that was causing redirects
+  useEffect(() => {
+    // Check if already authenticated
+    const checkAuth = async () => {
+      if (await isAuthenticated()) {
+        navigate("/admin/dashboard");
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,13 +130,6 @@ const AdminLogin = () => {
               Register here
             </Button>
           </p>
-          <Button
-            variant="link"
-            onClick={() => navigate("/admin/dashboard")}
-            className="mt-2"
-          >
-            Skip to Dashboard
-          </Button>
         </div>
       </div>
     </div>

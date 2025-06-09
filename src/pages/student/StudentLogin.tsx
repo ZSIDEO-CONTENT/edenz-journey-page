@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { studentLogin } from '@/lib/api';
+import { isStudentAuthenticated, studentLogin } from '@/lib/api';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -29,7 +29,21 @@ const StudentLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Remove automatic auth check that was causing redirects
+  useEffect(() => {
+    // Check if already authenticated
+    const checkAuth = async () => {
+      try {
+        const isAuth = await isStudentAuthenticated();
+        if (isAuth) {
+          navigate('/student/dashboard');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -129,14 +143,6 @@ const StudentLogin = () => {
           <Link to="/" className="block mt-4 text-sm text-primary hover:underline">
             Back to home
           </Link>
-          
-          <Button
-            variant="link"
-            onClick={() => navigate("/student/dashboard")}
-            className="mt-2"
-          >
-            Skip to Dashboard
-          </Button>
         </div>
       </div>
     </div>
