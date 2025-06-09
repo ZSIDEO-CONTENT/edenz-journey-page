@@ -6,7 +6,7 @@ import { MessageCircle, Send, Search, BookOpen, Globe, GraduationCap, Sparkles, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { sendChatMessage } from '@/lib/chatService';
+import { sendChatMessage } from '@/lib/aiAgent';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,8 +14,9 @@ const Chat = () => {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{sender: string, content: string}[]>([
-    { content: 'Hello! I am Edenz AI Assistant. How can I help you with your study abroad journey today?', sender: 'bot' }
+    { content: 'Hello! I am Dr. Sarah, your AI study abroad consultant from Edenz. How can I help you with your international education journey today?', sender: 'bot' }
   ]);
+  const [conversationHistory, setConversationHistory] = useState<{role: string, content: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState(0);
   const [progressValue, setProgressValue] = useState(0);
@@ -73,14 +74,18 @@ const Chat = () => {
     const userMessage = { content: message, sender: 'user' };
     setMessages(prev => [...prev, userMessage]);
     
+    // Update conversation history
+    const newHistory = [...conversationHistory, { role: 'user', content: message }];
+    setConversationHistory(newHistory);
+    
     // Clear input and set loading
     const currentMessage = message;
     setMessage('');
     setIsLoading(true);
     
     try {
-      // Send message to our chat service
-      const response = await sendChatMessage(currentMessage);
+      // Send message to our AI agent
+      const response = await sendChatMessage(currentMessage, newHistory);
       
       // Store the session ID for future messages
       if (response.session_id && !sessionId) {
@@ -88,10 +93,14 @@ const Chat = () => {
       }
       
       // Add bot response
-      setMessages(prev => [...prev, { 
+      const botMessage = { 
         content: response.response,
         sender: 'bot'
-      }]);
+      };
+      setMessages(prev => [...prev, botMessage]);
+      
+      // Update conversation history with bot response
+      setConversationHistory(prev => [...prev, { role: 'assistant', content: response.response }]);
       
       // Handle booking intent if detected
       if (response.action === "booking_intent") {

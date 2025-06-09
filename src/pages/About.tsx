@@ -1,77 +1,69 @@
 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Users, Award, GraduationCap, Building, Star, Globe } from 'lucide-react';
+import { Users, Award, GraduationCap } from 'lucide-react';
 
 const About = () => {
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-hidden w-full">
       <Navbar />
-      <main>
-        {/* Hero Section */}
-        <section className="pt-32 pb-20 relative overflow-hidden">
-          <div className="hero-blob h-[600px] w-[600px] right-[-300px] top-[-100px] opacity-30"></div>
-          <div className="hero-blob h-[600px] w-[600px] left-[-300px] bottom-[-100px] opacity-30 animation-delay-2000"></div>
-          
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                About Us
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Your Trusted Study Abroad Partner in Pakistan
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Edenz Consultant has been helping Pakistani students achieve their global education dreams since 2003. With our expert guidance and personalized approach, we've successfully placed thousands of students in prestigious universities worldwide.
-              </p>
-            </div>
-            
-            <div className="relative mt-12 md:mt-16">
-              <img 
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1471&q=80" 
-                alt="Edenz Consultant Team" 
-                className="w-full h-auto rounded-2xl shadow-xl"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Our Story Section */}
-        <section className="py-20 bg-edenz-light/30">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div className="animate-fade-in">
+      <main className="w-full">
+        {/* CEO Section */}
+        <section className="pt-32 pb-20 w-full">
+          <div className="container mx-auto px-4 w-full">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-16">
                 <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                  Our Story
+                  Leadership
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                  From Lahore to the World
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Founded in 2003 in Lahore, Pakistan, Edenz Consultant began with a mission to help Pakistani students access quality education abroad. What started as a small team with big ambitions has now grown into one of Pakistan's most trusted education consultancies.
-                </p>
-                <p className="text-gray-600 mb-6">
-                  We understand the unique challenges Pakistani students face when applying to international universities, from academic requirements to visa processes. Our specialized knowledge and experience have helped thousands of students overcome these challenges.
-                </p>
-                <p className="text-gray-600">
-                  Beyond admissions, we take pride in our comprehensive test preparation programs for IELTS, PTE, TOEFL, GRE, and GMAT, helping students build the skills they need to succeed in international academics.
+                <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                  Meet Our CEO
+                </h1>
+                <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+                  Leading Edenz Consultant with vision, expertise, and a commitment to student success in international education.
                 </p>
               </div>
               
-              <div className="relative h-[500px] animate-fade-in">
-                <div className="absolute top-0 right-0 w-3/4 h-3/4 rounded-2xl overflow-hidden shadow-lg z-20">
-                  <img 
-                    src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1484&q=80" 
-                    alt="Edenz Team Meeting" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="absolute bottom-0 left-0 w-3/4 h-3/4 rounded-2xl overflow-hidden shadow-lg z-10">
-                  <img 
-                    src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80" 
-                    alt="Edenz Office" 
-                    className="w-full h-full object-cover"
-                  />
+              <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                  <div className="relative h-96 lg:h-auto">
+                    <img 
+                      src="/lovable-uploads/ddb0bc44-b0f9-47fb-b0be-f26b900dea36.png" 
+                      alt="Dr. Taimoor Ali Ahmad - CEO" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent lg:hidden"></div>
+                  </div>
+                  
+                  <div className="p-8 lg:p-12 flex flex-col justify-center">
+                    <h2 className="text-3xl font-bold mb-2">Dr. Taimoor Ali Ahmad</h2>
+                    <p className="text-primary font-semibold text-lg mb-6">Founder & CEO</p>
+                    
+                    <div className="space-y-4 text-gray-600">
+                      <p>
+                        Dr. Taimoor Ali Ahmad is the visionary founder and CEO of Edenz Consultant, with over two decades of experience in international education consulting. His passion for helping Pakistani students achieve their global education dreams has been the driving force behind Edenz Consultant's success.
+                      </p>
+                      
+                      <p>
+                        Under his leadership, Edenz Consultant has successfully guided thousands of students to prestigious universities across the globe. Dr. Ahmad's deep understanding of international education systems and visa processes has made him a trusted advisor for students and parents alike.
+                      </p>
+                      
+                      <p>
+                        His commitment to excellence and student-first approach continues to shape Edenz Consultant's mission of making quality international education accessible to Pakistani students.
+                      </p>
+                    </div>
+                    
+                    <div className="mt-8 grid grid-cols-2 gap-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-primary">20+</div>
+                        <div className="text-sm text-gray-600">Years Experience</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-primary">5000+</div>
+                        <div className="text-sm text-gray-600">Students Guided</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -79,7 +71,7 @@ const About = () => {
         </section>
 
         {/* Our Values Section */}
-        <section className="py-20">
+        <section className="py-20 bg-edenz-light/30 w-full">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
@@ -122,68 +114,6 @@ const About = () => {
                 <p className="text-gray-600">
                   We constantly update our knowledge about global education trends, university requirements, and visa regulations.
                 </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CEO Section */}
-        <section className="py-20 bg-edenz-light/30">
-          <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-16">
-                <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                  Leadership
-                </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                  Meet Our CEO
-                </h2>
-                <p className="text-gray-600 text-lg max-w-3xl mx-auto">
-                  Leading Edenz Consultant with vision, expertise, and a commitment to student success in international education.
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                  <div className="relative h-96 lg:h-auto">
-                    <img 
-                      src="/lovable-uploads/ddb0bc44-b0f9-47fb-b0be-f26b900dea36.png" 
-                      alt="Dr. Taimoor Ali Ahmad - CEO" 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent lg:hidden"></div>
-                  </div>
-                  
-                  <div className="p-8 lg:p-12 flex flex-col justify-center">
-                    <h3 className="text-3xl font-bold mb-2">Dr. Taimoor Ali Ahmad</h3>
-                    <p className="text-primary font-semibold text-lg mb-6">Founder & CEO</p>
-                    
-                    <div className="space-y-4 text-gray-600">
-                      <p>
-                        Dr. Taimoor Ali Ahmad is the visionary founder and CEO of Edenz Consultant, with over two decades of experience in international education consulting. His passion for helping Pakistani students achieve their global education dreams has been the driving force behind Edenz Consultant's success.
-                      </p>
-                      
-                      <p>
-                        Under his leadership, Edenz Consultant has successfully guided thousands of students to prestigious universities across the globe. Dr. Ahmad's deep understanding of international education systems and visa processes has made him a trusted advisor for students and parents alike.
-                      </p>
-                      
-                      <p>
-                        His commitment to excellence and student-first approach continues to shape Edenz Consultant's mission of making quality international education accessible to Pakistani students.
-                      </p>
-                    </div>
-                    
-                    <div className="mt-8 grid grid-cols-2 gap-6">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-primary">20+</div>
-                        <div className="text-sm text-gray-600">Years Experience</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-primary">5000+</div>
-                        <div className="text-sm text-gray-600">Students Guided</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
