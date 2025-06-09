@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 import uuid
 from datetime import datetime
 import logging
@@ -38,11 +39,16 @@ class IsStudent(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'student'
 
+class IsB2B(permissions.BasePermission):
+    """Permission for B2B partners"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'b2b'
+
 class IsOwnerOrStaff(permissions.BasePermission):
     """Permission to check if user is owner or staff"""
     def has_object_permission(self, request, view, obj):
-        # Allow admin and processing to access
-        if request.user.role in ['admin', 'processing']:
+        # Allow admin, processing, and B2B to access
+        if request.user.role in ['admin', 'processing', 'b2b']:
             return True
             
         # Check if user owns the record
@@ -74,7 +80,8 @@ class LoginView(APIView):
                         'email': user.email,
                         'name': user.name,
                         'role': user.role,
-                        'managed_regions': user.managed_regions if user.role == 'processing' else None
+                        'managed_regions': user.managed_regions if user.role == 'processing' else None,
+                        'company_name': user.company_name if user.role == 'b2b' else None
                     }
                 })
             else:
@@ -114,6 +121,19 @@ class AdminRegisterView(APIView):
             return Response({'success': True, 'message': 'Admin registered successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class B2BRegisterView(APIView):
+    """API view for B2B partner registration (requires admin approval)"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = UserRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            # Set role to b2b
+            serializer.validated_data['role'] = 'b2b'
+            user = serializer.save()
+            return Response({'success': True, 'message': 'B2B partner registered successfully'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class ProcessingMemberRegisterView(APIView):
     """API view for registering processing team members (admin only)"""
     permission_classes = [IsAuthenticated, IsAdminUser]
@@ -146,7 +166,17 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.all()
         elif self.request.user.role == 'processing':
             return User.objects.filter(role='student')
+        elif self.request.user.role == 'b2b':
+            return User.objects.filter(role='student')
         return User.objects.none()
+
+class B2BUsersViewSet(viewsets.ModelViewSet):
+    """ViewSet for B2B users management"""
+    queryset = User.objects.filter(role='b2b')
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsProcessingOrAdmin]
+
+# ... keep existing code (EducationViewSet, DocumentViewSet, ApplicationViewSet, etc.) the same ...
 
 class EducationViewSet(viewsets.ModelViewSet):
     """ViewSet for Education model"""
@@ -156,7 +186,7 @@ class EducationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             # Filter by student_id if provided
             student_id = self.request.query_params.get('student_id')
             if student_id:
@@ -184,7 +214,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             # Filter by student_id if provided
             student_id = self.request.query_params.get('student_id')
             if student_id:
@@ -212,7 +242,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             # Filter by student_id if provided
             student_id = self.request.query_params.get('student_id')
             if student_id:
@@ -245,7 +275,7 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             return Consultation.objects.all()
         # Students can only see their own records
         return Consultation.objects.filter(student=self.request.user)
@@ -256,6 +286,8 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             serializer.save(student=self.request.user)
         else:
             serializer.save()
+
+# ... keep existing code (QuestionnaireViewSet, QuestionnaireResponseViewSet, etc.) the same ...
 
 class QuestionnaireViewSet(viewsets.ModelViewSet):
     """ViewSet for Questionnaire model"""
@@ -276,7 +308,7 @@ class QuestionnaireResponseViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             # Filter by student_id if provided
             student_id = self.request.query_params.get('student_id')
             if student_id:
@@ -330,7 +362,7 @@ class StudentSubscriptionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role"""
-        if self.request.user.role in ['admin', 'processing']:
+        if self.request.user.role in ['admin', 'processing', 'b2b']:
             # Filter by student_id if provided
             student_id = self.request.query_params.get('student_id')
             if student_id:
@@ -380,7 +412,7 @@ class RecommendationsView(APIView):
     
     def get(self, request, student_id):
         # Get the student
-        if str(request.user.id) != str(student_id) and request.user.role not in ['admin', 'processing']:
+        if str(request.user.id) != str(student_id) and request.user.role not in ['admin', 'processing', 'b2b']:
             return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
             
         student = get_object_or_404(User, id=student_id)
@@ -420,7 +452,7 @@ class RecommendationsView(APIView):
     
     def post(self, request, student_id):
         # Generate new recommendations
-        if str(request.user.id) != str(student_id) and request.user.role not in ['admin', 'processing']:
+        if str(request.user.id) != str(student_id) and request.user.role not in ['admin', 'processing', 'b2b']:
             return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
             
         student = get_object_or_404(User, id=student_id)

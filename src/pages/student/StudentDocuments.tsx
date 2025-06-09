@@ -64,12 +64,22 @@ const StudentDocuments = () => {
       const userDocuments = await getStudentDocuments(user.id);
       console.log('Fetched documents:', userDocuments);
       
-      // Fetch required documents
-      const required = await getRequiredDocuments(user.id);
+      // Fetch required documents - FIXED: no arguments needed
+      const required = await getRequiredDocuments();
       console.log('Required documents:', required);
       
       setDocuments(userDocuments || []);
-      setRequiredDocuments(required || []);
+      
+      // FIXED: Map the required documents to match the RequiredDocument interface
+      const mappedRequired = required.map((doc: any) => ({
+        name: doc.name,
+        type: doc.name.toLowerCase().replace(/\s+/g, '_'),
+        description: `Required document: ${doc.name}`,
+        submitted: doc.uploaded,
+        status: doc.uploaded ? 'pending' : undefined
+      }));
+      
+      setRequiredDocuments(mappedRequired || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast({

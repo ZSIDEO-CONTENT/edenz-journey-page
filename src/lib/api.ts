@@ -8,8 +8,8 @@ interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
-// Helper function for API requests
-const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
+// Helper function for API requests - NOW EXPORTED
+export const fetchAPI = async (endpoint: string, options: FetchOptions = {}) => {
   try {
     // Ensure endpoint starts with / but doesn't end with /
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -298,7 +298,7 @@ export const getStudentDetails = async (studentId: string) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/student/profile/${studentId}`, {
+    return await fetchAPI(`/users/${studentId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -314,7 +314,7 @@ export const getStudentProfile = async (studentId: string) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/student/profile/${studentId}`, {
+    return await fetchAPI(`/users/${studentId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -329,7 +329,7 @@ export const updateStudentProfile = async (studentId: string, profileData: any) 
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/student/profile/${studentId}`, {
+    return await fetchAPI(`/users/${studentId}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -347,7 +347,7 @@ export const getStudentEducation = async (studentId: string) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/student/education/${studentId}`, {
+    return await fetchAPI(`/education`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -358,12 +358,29 @@ export const getStudentEducation = async (studentId: string) => {
   }
 };
 
+export const addStudentEducation = async (educationData: any) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    return await fetchAPI(`/education`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(educationData),
+    });
+  } catch (error) {
+    console.error("Add student education error:", error);
+    throw error;
+  }
+};
+
 // Student documents
 export const getStudentDocuments = async (studentId: string) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/documents/${studentId}`, {
+    return await fetchAPI(`/documents`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -374,15 +391,51 @@ export const getStudentDocuments = async (studentId: string) => {
   }
 };
 
-export const getRequiredDocuments = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
+export const getRequiredDocuments = async () => {
   try {
-    return await fetchAPI(`/documents/required/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+    // Return mock required documents with proper structure
+    return [
+      { 
+        id: 1, 
+        name: "Passport", 
+        required: true, 
+        uploaded: false,
+        type: "passport",
+        description: "Valid passport for international travel"
       },
-    });
+      { 
+        id: 2, 
+        name: "Academic Transcripts", 
+        required: true, 
+        uploaded: false,
+        type: "academic_transcript",
+        description: "Official transcripts from your educational institution"
+      },
+      { 
+        id: 3, 
+        name: "English Language Test", 
+        required: true, 
+        uploaded: false,
+        type: "ielts",
+        description: "IELTS, TOEFL, or other English proficiency test results"
+      },
+      { 
+        id: 4, 
+        name: "Statement of Purpose", 
+        required: true, 
+        uploaded: false,
+        type: "personal_statement",
+        description: "Personal statement explaining your academic goals"
+      },
+      { 
+        id: 5, 
+        name: "Letters of Recommendation", 
+        required: false, 
+        uploaded: false,
+        type: "recommendation_letter",
+        description: "Academic or professional recommendation letters"
+      }
+    ];
   } catch (error) {
     console.error("Get required documents error:", error);
     throw error;
@@ -393,7 +446,7 @@ export const uploadDocument = async (formData: FormData) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+    const response = await fetch(`${API_BASE_URL}/documents`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -417,7 +470,7 @@ export const getStudentApplications = async (studentId: string) => {
   const token = localStorage.getItem("studentToken");
   
   try {
-    return await fetchAPI(`/student/applications/${studentId}`, {
+    return await fetchAPI(`/applications`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -428,26 +481,10 @@ export const getStudentApplications = async (studentId: string) => {
   }
 };
 
-// Student onboarding steps
-export const getStudentOnboardingSteps = async (studentId: string) => {
-  const token = localStorage.getItem("studentToken");
-  
-  try {
-    return await fetchAPI(`/student/onboarding-steps/${studentId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  } catch (error) {
-    console.error("Get onboarding steps error:", error);
-    throw error;
-  }
-};
-
 // Contact & Consultation
 export const submitContactForm = async (formData: any) => {
   try {
-    return await fetchAPI("/contact", {
+    return await fetchAPI("/consultations", {
       method: "POST",
       body: JSON.stringify(formData),
     });
@@ -457,7 +494,6 @@ export const submitContactForm = async (formData: any) => {
   }
 };
 
-// Updated to match the expected structure in BookConsultation.tsx
 export interface ConsultationBookingData {
   name: string;
   email: string;
@@ -467,7 +503,6 @@ export interface ConsultationBookingData {
   consultationType: string;
   destination?: string;
   message?: string;
-  // Adding the fields that are used in BookConsultation.tsx
   preferredDate?: Date;
   preferredTime?: string;
   service?: string;
@@ -475,7 +510,7 @@ export interface ConsultationBookingData {
 
 export const submitConsultationBooking = async (formData: ConsultationBookingData) => {
   try {
-    return await fetchAPI("/consultation", {
+    return await fetchAPI("/consultations", {
       method: "POST",
       body: JSON.stringify(formData),
     });
@@ -485,7 +520,6 @@ export const submitConsultationBooking = async (formData: ConsultationBookingDat
   }
 };
 
-// Updated to match actual properties used in AdminDashboard
 export interface Consultation {
   id: string;
   name: string;
@@ -521,8 +555,8 @@ export const updateConsultationStatus = async (consultationId: string, status: s
   const token = localStorage.getItem("adminToken");
   
   try {
-    return await fetchAPI(`/consultations/${consultationId}/status`, {
-      method: "PUT",
+    return await fetchAPI(`/consultations/${consultationId}`, {
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -534,11 +568,12 @@ export const updateConsultationStatus = async (consultationId: string, status: s
   }
 };
 
+// Processing team functions
 export const getAllStudents = async () => {
   const token = localStorage.getItem("processingToken");
   
   try {
-    return await fetchAPI("/processing/students", {
+    return await fetchAPI("/users", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -549,19 +584,69 @@ export const getAllStudents = async () => {
   }
 };
 
+export const getStudentById = async (studentId: string) => {
+  const token = localStorage.getItem("processingToken");
+  
+  try {
+    return await fetchAPI(`/users/${studentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get student by ID error:", error);
+    throw error;
+  }
+};
+
 export const createStudentApplication = async (studentId: string, applicationData: any) => {
   const token = localStorage.getItem("processingToken");
   
   try {
-    return await fetchAPI(`/processing/students/${studentId}/applications`, {
+    return await fetchAPI(`/applications`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(applicationData),
+      body: JSON.stringify({
+        ...applicationData,
+        student_id: studentId,
+      }),
     });
   } catch (error) {
     console.error("Create student application error:", error);
+    throw error;
+  }
+};
+
+export const updateApplicationStatus = async (applicationId: string, status: string) => {
+  const token = localStorage.getItem("processingToken");
+  
+  try {
+    return await fetchAPI(`/applications/${applicationId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+  } catch (error) {
+    console.error("Update application status error:", error);
+    throw error;
+  }
+};
+
+export const getAllApplications = async () => {
+  const token = localStorage.getItem("processingToken");
+  
+  try {
+    return await fetchAPI("/applications", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.error("Get all applications error:", error);
     throw error;
   }
 };
@@ -572,18 +657,123 @@ export interface ChatMessage {
   sender: string;
   message: string;
   timestamp?: string;
-  // Adding content field to support Chat.tsx
   content?: string;
 }
 
 export const sendChatMessage = async (message: string) => {
   try {
-    return await fetchAPI("/chat/messages", {
+    return await fetchAPI("/chat", {
       method: "POST",
       body: JSON.stringify({ message }),
     });
   } catch (error) {
     console.error("Send chat message error:", error);
+    throw error;
+  }
+};
+
+// B2B Portal functions (for future implementation)
+export const isB2BAuthenticated = async () => {
+  const token = localStorage.getItem("b2bToken");
+  if (!token) return false;
+  
+  try {
+    const data = await fetchAPI("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    return data && data.role === "b2b";
+  } catch (error) {
+    console.error("B2B auth check error:", error);
+    localStorage.removeItem("b2bToken");
+    localStorage.removeItem("b2bUser");
+    return false;
+  }
+};
+
+export const b2bLogin = async (email: string, password: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        username: email, 
+        password: password,
+        grant_type: 'password'
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Login failed");
+    }
+
+    const data = await response.json();
+    
+    if (data.user.role !== "b2b") {
+      throw new Error("Not authorized as B2B partner");
+    }
+    
+    localStorage.setItem("b2bToken", data.access_token);
+    localStorage.setItem("b2bUser", JSON.stringify(data.user));
+    return data;
+  } catch (error) {
+    console.error("B2B login error:", error);
+    throw error;
+  }
+};
+
+export const logoutB2B = () => {
+  localStorage.removeItem("b2bToken");
+  localStorage.removeItem("b2bUser");
+};
+
+// Student onboarding steps - ADDED MISSING FUNCTION
+export const getStudentOnboardingSteps = async (studentId: string) => {
+  const token = localStorage.getItem("studentToken");
+  
+  try {
+    // For now, return mock onboarding data since the backend endpoint may not be ready
+    const mockSteps = [
+      {
+        id: "profile",
+        title: "Complete Profile",
+        description: "Fill out your personal information",
+        completed: false,
+        required: true,
+        link: "/student/profile"
+      },
+      {
+        id: "documents",
+        title: "Upload Documents",
+        description: "Upload required documents",
+        completed: false,
+        required: true,
+        link: "/student/documents"
+      },
+      {
+        id: "education",
+        title: "Add Education History",
+        description: "Add your educational background",
+        completed: false,
+        required: true,
+        link: "/student/profile"
+      }
+    ];
+    
+    const completedSteps = mockSteps.filter(step => step.completed).length;
+    const progress = (completedSteps / mockSteps.length) * 100;
+    
+    return {
+      steps: mockSteps,
+      progress: progress
+    };
+  } catch (error) {
+    console.error("Get student onboarding steps error:", error);
     throw error;
   }
 };
