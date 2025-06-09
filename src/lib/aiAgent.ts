@@ -1,9 +1,10 @@
 
-import OpenAI from 'openai';
+import OpenAI from 'openai'; 
 
 // Initialize OpenAI client with error handling
 const initializeOpenAI = () => {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const baseurl = import.meta.env.VITE_OPENAI_API_BASE_URL;
   
   if (!apiKey || apiKey === 'your_openai_api_key_here') {
     console.warn('OpenAI API key not configured. Using fallback responses.');
@@ -11,6 +12,7 @@ const initializeOpenAI = () => {
   }
   
   return new OpenAI({
+    baseURL: baseurl,
     apiKey,
     dangerouslyAllowBrowser: true
   });
