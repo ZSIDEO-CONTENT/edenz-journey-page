@@ -3,7 +3,8 @@ import OpenAI from 'openai';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'demo-key',
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY || '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',
   dangerouslyAllowBrowser: true
 });
 
@@ -30,9 +31,9 @@ class StudyAbroadAgent {
       ];
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: "deepseek/deepseek-r1-0528-qwen3-8b:free",
         messages: messages as any,
-        max_tokens: 500,
+        max_tokens: 50000,
         temperature: 0.7,
       });
 
