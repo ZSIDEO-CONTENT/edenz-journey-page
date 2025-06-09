@@ -1,455 +1,348 @@
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
+import { ArrowLeft, Calendar, Clock, User, Mail, Phone, MessageSquare, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { submitConsultationBooking, ConsultationBookingData } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Invalid email address' }),
-  phone: z.string().min(10, { message: 'Phone number must be at least 10 digits' }),
-  preferredDate: z.date({
-    required_error: "Please select a date",
-  }),
-  preferredTime: z.string({
-    required_error: "Please select a time slot",
-  }),
-  destination: z.string().optional(),
-  service: z.string({
-    required_error: "Please select a service",
-  }),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  preferredCountry: z.string().min(1, 'Please select a preferred country'),
+  studyLevel: z.string().min(1, 'Please select your study level'),
+  preferredDate: z.string().min(1, 'Please select a preferred date'),
+  preferredTime: z.string().min(1, 'Please select a preferred time'),
   message: z.string().optional(),
 });
 
-type BookingFormValues = z.infer<typeof formSchema>;
-
 const BookConsultation = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notificationSent, setNotificationSent] = useState<{email: boolean, whatsapp: boolean} | null>(null);
-  
-  const timeSlots = [
-    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", 
-    "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"
-  ];
-  
-  const destinations = [
-    "United States", "United Kingdom", "Australia", "Canada", 
-    "Germany", "New Zealand", "Ireland", "Sweden", "Netherlands", "Other"
-  ];
-  
-  const services = [
-    "Study Abroad Counseling", "Visa Assistance", "University Applications", 
-    "IELTS Preparation", "PTE Preparation", "TOEFL Preparation", 
-    "GRE Coaching", "GMAT Coaching"
-  ];
-  
-  const form = useForm<BookingFormValues>({
+
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
+      fullName: '',
       email: '',
       phone: '',
+      preferredCountry: '',
+      studyLevel: '',
+      preferredDate: '',
+      preferredTime: '',
       message: '',
     },
   });
 
-  const onSubmit = async (data: BookingFormValues) => {
-    setIsSubmitting(true);
-    setNotificationSent(null);
-    
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
     try {
-      // Convert the form data to match the API interface
-      const bookingData: ConsultationBookingData = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        date: format(data.preferredDate, 'yyyy-MM-dd'),
-        time: data.preferredTime,
-        consultationType: data.service,
-        destination: data.destination || '',
-        message: data.message,
-        // Include the original data format as well to ensure compatibility
-        preferredDate: data.preferredDate,
-        preferredTime: data.preferredTime,
-        service: data.service
-      };
-      
-      const notifications = await submitConsultationBooking(bookingData);
-      setNotificationSent({
-        email: notifications.email_sent,
-        whatsapp: notifications.whatsapp_sent
-      });
-      
-      let toastMessage = "Your consultation has been booked successfully. ";
-      
-      if (notifications.email_sent) {
-        toastMessage += "A confirmation email has been sent. ";
-      }
-      
-      if (notifications.whatsapp_sent) {
-        toastMessage += "A WhatsApp message has also been sent. ";
-      }
+      // Simulate consultation booking
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
       toast({
-        title: "Consultation Booked",
-        description: toastMessage + "We'll contact you shortly to confirm.",
+        title: 'Consultation Booked Successfully!',
+        description: 'We will contact you within 24 hours to confirm your appointment.',
       });
       
       form.reset();
     } catch (error) {
-      console.error('Error booking consultation:', error);
       toast({
-        title: "Booking Failed",
-        description: "There was an error booking your consultation. Please try again later.",
-        variant: "destructive",
+        title: 'Error booking consultation',
+        description: 'Please try again or call us directly at +92 333 4229697.',
+        variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="relative overflow-hidden">
+    <div className="w-full min-h-screen overflow-x-hidden">
       <Navbar />
-      <main>
-        <section className="pt-32 pb-20 relative overflow-hidden">
-          <div className="hero-blob h-[600px] w-[600px] right-[-300px] top-[-100px] opacity-30"></div>
-          
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
-                Expert Consultation
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                Book Your Consultation with Our Experts
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Schedule a personalized consultation with our education experts to discuss your study abroad plans and get guidance tailored to your needs.
-              </p>
-              <div className="mt-6 inline-block bg-primary/10 text-primary p-3 rounded-lg font-medium">
-                Consultation Fee: 5000 PKR
+      <main className="w-full">
+        {/* Hero Section */}
+        <section className="pt-32 pb-20 bg-gradient-to-br from-primary/5 to-blue-50 w-full">
+          <div className="w-full px-4">
+            <div className="max-w-7xl mx-auto">
+              <Link 
+                to="/" 
+                onClick={scrollToTop}
+                className="inline-flex items-center text-primary hover:text-primary/80 transition-colors mb-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Home
+              </Link>
+              
+              <div className="text-center">
+                <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Book Free Consultation
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                  Schedule Your Study Abroad Consultation
+                </h1>
+                <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+                  Get personalized guidance from our expert counselors. Book a free consultation to discuss your study abroad goals and create your path to success.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="py-20 bg-edenz-light/30">
-          <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-lg">
-              <h2 className="text-2xl font-bold mb-6">Consultation Booking</h2>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your full name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="Enter your email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone Number (WhatsApp preferred)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your phone number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="service"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Service</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select service" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {services.map((service) => (
-                                <SelectItem key={service} value={service}>
-                                  {service}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="preferredDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Preferred Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => 
-                                  date < new Date() || 
-                                  date > new Date(new Date().setMonth(new Date().getMonth() + 2)) ||
-                                  date.getDay() === 0 // Disable Sundays
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="preferredTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Preferred Time</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select time slot" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {timeSlots.map((slot) => (
-                                <SelectItem key={slot} value={slot}>
-                                  {slot}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="destination"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preferred Study Destination</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select destination (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {destinations.map((destination) => (
-                              <SelectItem key={destination} value={destination}>
-                                {destination}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Additional Information</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Tell us about your educational background and goals" 
-                            className="resize-none"
-                            rows={4}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button 
-                    type="submit" 
-                    className="btn-primary w-full"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Processing Payment...' : 'Pay 5000 PKR & Book Consultation'}
-                  </Button>
-                </form>
-              </Form>
-              
-              {notificationSent && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-green-800 text-sm">
-                    <span className="font-semibold">Booking confirmed!</span> 
-                    {notificationSent.email && " We've sent you a confirmation email."}
-                    {notificationSent.whatsapp && " We've also sent a WhatsApp message to your phone."}
-                  </p>
+        {/* Consultation Form */}
+        <section className="py-20 w-full">
+          <div className="w-full px-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-4">Book Your Free Consultation</h2>
+                  <p className="text-gray-600">Fill out the form below and our expert counselors will get back to you within 24 hours.</p>
                 </div>
-              )}
-              
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="flex items-start space-x-2">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600">
-                      Get personalized guidance from our expert counselors based on your academic profile and career goals. The consultation fee is 5000 PKR.
-                    </p>
-                  </div>
-                </div>
+
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Personal Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="fullName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              Full Name
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="Your full name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center">
+                              <Mail className="h-4 w-4 mr-2" />
+                              Email Address
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="your.email@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center">
+                              <Phone className="h-4 w-4 mr-2" />
+                              Phone Number
+                            </FormLabel>
+                            <FormControl>
+                              <Input placeholder="+92 XXX XXXXXXX" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="preferredCountry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Preferred Study Destination</FormLabel>
+                            <FormControl>
+                              <select 
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                {...field}
+                              >
+                                <option value="">Select a country</option>
+                                <option value="usa">United States</option>
+                                <option value="canada">Canada</option>
+                                <option value="uk">United Kingdom</option>
+                                <option value="australia">Australia</option>
+                                <option value="germany">Germany</option>
+                                <option value="new-zealand">New Zealand</option>
+                                <option value="france">France</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="studyLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Study Level</FormLabel>
+                            <FormControl>
+                              <select 
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                {...field}
+                              >
+                                <option value="">Select level</option>
+                                <option value="bachelors">Bachelor's</option>
+                                <option value="masters">Master's</option>
+                                <option value="phd">PhD</option>
+                                <option value="diploma">Diploma</option>
+                                <option value="language">Language Course</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="preferredDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Preferred Date
+                            </FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="preferredTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center">
+                              <Clock className="h-4 w-4 mr-2" />
+                              Preferred Time
+                            </FormLabel>
+                            <FormControl>
+                              <select 
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                {...field}
+                              >
+                                <option value="">Select time</option>
+                                <option value="9:00 AM">9:00 AM</option>
+                                <option value="10:00 AM">10:00 AM</option>
+                                <option value="11:00 AM">11:00 AM</option>
+                                <option value="12:00 PM">12:00 PM</option>
+                                <option value="1:00 PM">1:00 PM</option>
+                                <option value="2:00 PM">2:00 PM</option>
+                                <option value="3:00 PM">3:00 PM</option>
+                                <option value="4:00 PM">4:00 PM</option>
+                                <option value="5:00 PM">5:00 PM</option>
+                              </select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Additional Message (Optional)
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Tell us about your study goals, preferred programs, or any specific questions..."
+                              className="min-h-24"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" className="w-full py-3" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Booking Consultation...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Book Free Consultation
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
               </div>
             </div>
           </div>
         </section>
-        
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center mb-16">
-              <h2 className="text-3xl font-bold mb-4">Why Choose Edenz Consultant</h2>
-              <p className="text-gray-600">
-                We're committed to helping Pakistani students achieve their dreams of studying abroad with personalized guidance and support.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="feature-card">
-                <div className="flex flex-col items-center text-center">
-                  <div className="bg-primary/10 rounded-full p-4 mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Experienced Counselors</h3>
-                  <p className="text-gray-600">
-                    Our team of experienced counselors provides expert guidance on university selection, application process, and visa requirements.
-                  </p>
+
+        {/* Contact Information */}
+        <section className="py-12 bg-gray-50 w-full">
+          <div className="w-full px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              <h3 className="text-2xl font-bold mb-6">Prefer to Talk Directly?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <Phone className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold mb-2">Call Us</h4>
+                  <a href="tel:+923334229697" className="text-primary hover:underline">
+                    +92 333 4229697
+                  </a>
                 </div>
-              </div>
-              
-              <div className="feature-card">
-                <div className="flex flex-col items-center text-center">
-                  <div className="bg-primary/10 rounded-full p-4 mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">High Success Rate</h3>
-                  <p className="text-gray-600">
-                    We pride ourselves on our high visa success rate and successful university placements for Pakistani students.
-                  </p>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <Mail className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold mb-2">Email Us</h4>
+                  <a href="mailto:info@edenzconsultant.org" className="text-primary hover:underline">
+                    info@edenzconsultant.org
+                  </a>
                 </div>
-              </div>
-              
-              <div className="feature-card">
-                <div className="flex flex-col items-center text-center">
-                  <div className="bg-primary/10 rounded-full p-4 mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Comprehensive Services</h3>
-                  <p className="text-gray-600">
-                    From test preparation to visa processing, we offer end-to-end support for your study abroad journey.
-                  </p>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <Calendar className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold mb-2">Office Hours</h4>
+                  <p className="text-sm text-gray-600">Mon-Fri: 9AM-6PM<br />Sat: 10AM-4PM</p>
                 </div>
               </div>
             </div>
