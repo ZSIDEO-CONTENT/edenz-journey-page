@@ -1,5 +1,5 @@
 
-import OpenAI from 'openai';
+import OpenAI from 'openai'; 
 
 // Initialize OpenAI client with error handling
 const initializeOpenAI = () => {
