@@ -132,6 +132,7 @@ const Contact = () => {
                         <a href="mailto:info@edenzconsultant.org" className="text-gray-600 hover:text-primary transition-colors">
                           info@edenzconsultant.org
                         </a>
+                        <br />
                         <a href="mailto:info@edenzconsultant.org" className="text-gray-600 hover:text-primary transition-colors">
                           taimoor@edenzconsultant.org
                         </a>
