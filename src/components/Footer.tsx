@@ -1,4 +1,3 @@
-
 import { Facebook, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -72,11 +71,22 @@ const Footer = () => {
                 <Phone className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 <a href="tel:+923334229697" className="text-gray-400 hover:text-primary transition-colors">+92 333 4228697</a>
               </li>
-              <li className="flex items-center">
-                <Mail className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
-                <a href="mailto:info@edenzconsultant.org" className="text-gray-400 hover:text-primary transition-colors">info@edenzconsultant.org</a>
-                <br />
-                <a href="mailto:info@edenzconsultant.org" className="text-gray-400 hover:text-primary transition-colors">taimoor@edenzconsultant.org</a>
+              <li className="flex items-start">
+                <Mail className="h-5 w-5 text-primary mr-3 flex-shrink-0 mt-1" />
+                <div className="flex flex-col text-left">
+                  <a
+                    href="mailto:info@edenzconsultant.org"
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    info@edenzconsultant.org
+                  </a>
+                  <a
+                    href="mailto:taimoor@edenzconsultant.org"
+                    className="text-gray-400 hover:text-primary transition-colors"
+                  >
+                    taimoor@edenzconsultant.org
+                  </a>
+                </div>
               </li>
             </ul>
           </div>
