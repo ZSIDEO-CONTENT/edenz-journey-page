@@ -107,7 +107,7 @@ const Contact = () => {
                       </div>
                       <div className="text-left">
                         <h3 className="font-semibold text-lg mb-1 text-left">Office Address</h3>
-                        <p className="text-gray-600 text-left">627/B, opp. Pak Turk Muraif School, Lahore, 54000</p>
+                        <p className="text-gray-600 text-left">627 B Iqbal Avenua, Khayban e jinnah road, near UCP University,  Johar Town, Lahore 54000, Pakistan.</p>
                       </div>
                     </div>
 
@@ -118,7 +118,7 @@ const Contact = () => {
                       <div className="text-left">
                         <h3 className="font-semibold text-lg mb-1 text-left">Phone Number</h3>
                         <a href="tel:+923334229697" className="text-gray-600 hover:text-primary transition-colors">
-                          +92 333 4229697
+                          +92 333 4228697
                         </a>
                       </div>
                     </div>
@@ -131,6 +131,9 @@ const Contact = () => {
                         <h3 className="font-semibold text-lg mb-1 text-left">Email Address</h3>
                         <a href="mailto:info@edenzconsultant.org" className="text-gray-600 hover:text-primary transition-colors">
                           info@edenzconsultant.org
+                        </a>
+                        <a href="mailto:info@edenzconsultant.org" className="text-gray-600 hover:text-primary transition-colors">
+                          taimoor@edenzconsultant.org
                         </a>
                       </div>
                     </div>

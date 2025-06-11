@@ -64,17 +64,18 @@ const Footer = () => {
                     rel="noopener noreferrer"
                     className="text-gray-400 hover:text-primary transition-colors"
                   >
-                    627/B, opp. Pak Turk Muraif School, Lahore, 54000
+                    627 B Iqbal Avenua, Khayban e jinnah road, near UCP University,  Johar Town, Lahore 54000, Pakistan.
                   </a>
                 </div>
               </li>
               <li className="flex items-center">
                 <Phone className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
-                <a href="tel:+923334229697" className="text-gray-400 hover:text-primary transition-colors">+92 333 4229697</a>
+                <a href="tel:+923334229697" className="text-gray-400 hover:text-primary transition-colors">+92 333 4228697</a>
               </li>
               <li className="flex items-center">
                 <Mail className="h-5 w-5 text-primary mr-3 flex-shrink-0" />
                 <a href="mailto:info@edenzconsultant.org" className="text-gray-400 hover:text-primary transition-colors">info@edenzconsultant.org</a>
+                <a href="mailto:info@edenzconsultant.org" className="text-gray-400 hover:text-primary transition-colors">taimoor@edenzconsultant.org</a>
               </li>
             </ul>
           </div>
