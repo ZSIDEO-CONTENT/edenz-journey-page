@@ -22,11 +22,13 @@ from .serializers import (
     LoginSerializer, EducationSerializer, DocumentSerializer, ApplicationSerializer,
     ConsultationSerializer, QuestionnaireSerializer, QuestionnaireResponseSerializer,
     DestinationGuideSerializer, DestinationDocumentSerializer, DestinationFAQSerializer,
-    StudentSubscriptionSerializer
+    StudentSubscriptionSerializer, AdminRegisterSerializer
 )
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# ... keep existing code (custom permissions and other auth views) the same ...
 
 # Custom permissions
 class IsProcessingOrAdmin(permissions.BasePermission):
@@ -113,7 +115,7 @@ class AdminRegisterView(APIView):
         if 'adminSecretKey' not in request.data or request.data['adminSecretKey'] != admin_secret:
             return Response({'detail': 'Invalid admin secret key'}, status=status.HTTP_403_FORBIDDEN)
         
-        # Create a copy of request data and only remove the adminSecretKey
+        # Create a copy of request data and remove the adminSecretKey
         registration_data = request.data.copy()
         registration_data.pop('adminSecretKey', None)
         
@@ -121,14 +123,15 @@ class AdminRegisterView(APIView):
         if User.objects.filter(email=registration_data.get('email')).exists():
             return Response({'detail': 'Email already in use'}, status=status.HTTP_400_BAD_REQUEST)
             
-        serializer = UserRegisterSerializer(data=registration_data)
+        serializer = AdminRegisterSerializer(data=registration_data)
         if serializer.is_valid():
-            # Set role to admin
-            user = serializer.save(role='admin')
+            user = serializer.save()
             return Response({'success': True, 'message': 'Admin registered successfully'}, status=status.HTTP_201_CREATED)
         
         print("Admin registration validation errors:", serializer.errors)  # Debug logging
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ... keep existing code (B2BRegisterView, ProcessingMemberRegisterView, CurrentUserView and all ViewSets) the same ...
 
 class B2BRegisterView(APIView):
     """API view for B2B partner registration (requires admin approval)"""
@@ -184,8 +187,6 @@ class B2BUsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(role='b2b')
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsProcessingOrAdmin]
-
-# ... keep existing code (EducationViewSet, DocumentViewSet, ApplicationViewSet, ConsultationViewSet, QuestionnaireViewSet, QuestionnaireResponseViewSet, DestinationGuideViewSet, DestinationDocumentViewSet, DestinationFAQViewSet, StudentSubscriptionViewSet, ChatView, RecommendationsView) the same ...
 
 class EducationViewSet(viewsets.ModelViewSet):
     """ViewSet for Education model"""

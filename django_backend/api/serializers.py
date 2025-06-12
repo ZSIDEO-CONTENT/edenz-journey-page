@@ -53,6 +53,32 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class AdminRegisterSerializer(serializers.ModelSerializer):
+    """Serializer for admin registration (no password confirmation required)"""
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+
+    class Meta:
+        model = User
+        fields = ('name', 'email', 'password', 'phone')
+        extra_kwargs = {
+            'name': {'required': True},
+            'email': {'required': True},
+            'phone': {'required': True},
+        }
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=validated_data['email'],
+            email=validated_data['email'],
+            name=validated_data['name'],
+            phone=validated_data['phone'],
+            role='admin'
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+
 class ProcessingMemberRegisterSerializer(serializers.ModelSerializer):
     """Serializer for registering processing team members (by admin)"""
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -93,6 +119,8 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, style={'input_type': 'password'})
 
+
+# ... keep existing code (EducationSerializer, DocumentSerializer, ApplicationSerializer, ConsultationSerializer, QuestionnaireSerializer, QuestionnaireResponseSerializer, DestinationGuideSerializer, DestinationDocumentSerializer, DestinationFAQSerializer, StudentSubscriptionSerializer) the same ...
 
 class EducationSerializer(serializers.ModelSerializer):
     """Serializer for Education model"""
