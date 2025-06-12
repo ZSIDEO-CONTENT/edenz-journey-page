@@ -28,13 +28,13 @@ router.register(r'b2b-users', B2BUsersViewSet, basename='b2buser')
 
 urlpatterns = [
     # Authentication endpoints
-    path('auth/token/', LoginView.as_view(), name='token_obtain_pair'),
-    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/register/student/', RegisterView.as_view(), name='register'),
-    path('auth/register/admin/', AdminRegisterView.as_view(), name='admin_register'),
-    path('auth/register/b2b/', B2BRegisterView.as_view(), name='b2b_register'),
-    path('auth/processing/register/', ProcessingMemberRegisterView.as_view(), name='processing_register'),
-    path('auth/me/', CurrentUserView.as_view(), name='current_user'),
+    path('auth/token', LoginView.as_view(), name='token_obtain_pair'),
+    path('auth/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/register/student', RegisterView.as_view(), name='register'),
+    path('auth/register/admin', AdminRegisterView.as_view(), name='admin_register'),
+    path('auth/register/b2b', B2BRegisterView.as_view(), name='b2b_register'),
+    path('auth/processing/register', ProcessingMemberRegisterView.as_view(), name='processing_register'),
+    path('auth/me', CurrentUserView.as_view(), name='current_user'),
     
     # Chat endpoint
     path('chat/', ChatView.as_view(), name='chat'),

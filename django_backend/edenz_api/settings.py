@@ -1,4 +1,3 @@
-
 """
 Django settings for edenz_api project.
 """
@@ -68,14 +67,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'edenz_api.wsgi.application'
 
 # Database
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('DB_NAME', 'devdb'),
+#         'USER': os.getenv('DB_USER', 'ali'),
+#         'PASSWORD': os.getenv('DB_PASSWORD', 'Allah123'),
+#         'HOST': os.getenv('DB_HOST', '92.113.25.36'),
+#         'PORT': os.getenv('DB_PORT', '5432'),
+#     }
+# }
+
+# Use SQLite for production or local development
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'devdb'),
-        'USER': os.getenv('DB_USER', 'ali'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'Allah123'),
-        'HOST': os.getenv('DB_HOST', '92.113.25.36'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
