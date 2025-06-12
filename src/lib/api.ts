@@ -108,12 +108,11 @@ export const adminLogin = async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        username: email, 
+      body: JSON.stringify({
+        email: email, 
         password: password,
-        grant_type: 'password'
       }),
     });
 
@@ -158,12 +157,11 @@ export const processingLogin = async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        username: email, 
+      body: JSON.stringify({
+        email: email, 
         password: password,
-        grant_type: 'password'
       }),
     });
 
@@ -192,12 +190,11 @@ export const studentLogin = async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        username: email, 
+      body: JSON.stringify({
+        email: email, 
         password: password,
-        grant_type: 'password'
       }),
     });
 
@@ -698,12 +695,11 @@ export const b2bLogin = async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/token`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        username: email, 
+      body: JSON.stringify({
+        email: email, 
         password: password,
-        grant_type: 'password'
       }),
     });
 
