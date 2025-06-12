@@ -113,9 +113,9 @@ class AdminRegisterView(APIView):
         if 'adminSecretKey' not in request.data or request.data['adminSecretKey'] != admin_secret:
             return Response({'detail': 'Invalid admin secret key'}, status=status.HTTP_403_FORBIDDEN)
         
-        # Create a copy of request data without the adminSecretKey
+        # Create a copy of request data and only remove the adminSecretKey
         registration_data = request.data.copy()
-        del registration_data['adminSecretKey']
+        registration_data.pop('adminSecretKey', None)
         
         # Check if user already exists
         if User.objects.filter(email=registration_data.get('email')).exists():
