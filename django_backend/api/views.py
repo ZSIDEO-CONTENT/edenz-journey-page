@@ -81,7 +81,7 @@ class LoginView(APIView):
                         'name': user.name,
                         'role': user.role,
                         'managed_regions': user.managed_regions if user.role == 'processing' else None,
-                        'company_name': user.company_name if user.role == 'b2b' else None
+                        'company_name': getattr(user, 'company_name', None) if user.role == 'b2b' else None
                     }
                 })
             else:
@@ -112,13 +112,22 @@ class AdminRegisterView(APIView):
         admin_secret = 'admin123'  # Use environment variable in production
         if 'adminSecretKey' not in request.data or request.data['adminSecretKey'] != admin_secret:
             return Response({'detail': 'Invalid admin secret key'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Create a copy of request data without the adminSecretKey
+        registration_data = request.data.copy()
+        del registration_data['adminSecretKey']
+        
+        # Check if user already exists
+        if User.objects.filter(email=registration_data.get('email')).exists():
+            return Response({'detail': 'Email already in use'}, status=status.HTTP_400_BAD_REQUEST)
             
-        serializer = UserRegisterSerializer(data=request.data)
+        serializer = UserRegisterSerializer(data=registration_data)
         if serializer.is_valid():
             # Set role to admin
-            serializer.validated_data['role'] = 'admin'
-            user = serializer.save()
+            user = serializer.save(role='admin')
             return Response({'success': True, 'message': 'Admin registered successfully'}, status=status.HTTP_201_CREATED)
+        
+        print("Admin registration validation errors:", serializer.errors)  # Debug logging
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class B2BRegisterView(APIView):
@@ -176,7 +185,7 @@ class B2BUsersViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsProcessingOrAdmin]
 
-# ... keep existing code (EducationViewSet, DocumentViewSet, ApplicationViewSet, etc.) the same ...
+# ... keep existing code (EducationViewSet, DocumentViewSet, ApplicationViewSet, ConsultationViewSet, QuestionnaireViewSet, QuestionnaireResponseViewSet, DestinationGuideViewSet, DestinationDocumentViewSet, DestinationFAQViewSet, StudentSubscriptionViewSet, ChatView, RecommendationsView) the same ...
 
 class EducationViewSet(viewsets.ModelViewSet):
     """ViewSet for Education model"""
@@ -286,8 +295,6 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             serializer.save(student=self.request.user)
         else:
             serializer.save()
-
-# ... keep existing code (QuestionnaireViewSet, QuestionnaireResponseViewSet, etc.) the same ...
 
 class QuestionnaireViewSet(viewsets.ModelViewSet):
     """ViewSet for Questionnaire model"""
