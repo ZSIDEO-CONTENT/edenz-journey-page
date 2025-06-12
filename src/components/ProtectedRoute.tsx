@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { isAuthenticated, isStudentAuthenticated, isProcessingAuthenticated } from "@/lib/api";
+import { isAuthenticated, isStudentAuthenticated, isProcessingAuthenticated, isB2BAuthenticated } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -10,13 +10,15 @@ interface ProtectedRouteProps {
   requiresAdmin?: boolean;
   requiresStudent?: boolean;
   requiresProcessing?: boolean;
+  requiresB2B?: boolean;
 }
 
 const ProtectedRoute = ({ 
   children, 
   requiresAdmin = false, 
   requiresStudent = false,
-  requiresProcessing = false 
+  requiresProcessing = false,
+  requiresB2B = false 
 }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
   const [auth, setAuth] = useState(false);
@@ -57,6 +59,16 @@ const ProtectedRoute = ({
             });
             navigate("/processing/login");
           }
+        } else if (requiresB2B) {
+          isAuth = await isB2BAuthenticated();
+          if (!isAuth) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in to access the B2B portal",
+              variant: "destructive",
+            });
+            navigate("/b2b/login");
+          }
         }
         
         setAuth(isAuth);
@@ -74,7 +86,7 @@ const ProtectedRoute = ({
     };
 
     checkAuth();
-  }, [navigate, requiresAdmin, requiresStudent, requiresProcessing]);
+  }, [navigate, requiresAdmin, requiresStudent, requiresProcessing, requiresB2B]);
 
   if (loading) {
     return (
@@ -92,6 +104,8 @@ const ProtectedRoute = ({
       return <Navigate to="/student/login" />;
     } else if (requiresProcessing) {
       return <Navigate to="/processing/login" />;
+    } else if (requiresB2B) {
+      return <Navigate to="/b2b/login" />;
     }
     return <Navigate to="/" />;
   }

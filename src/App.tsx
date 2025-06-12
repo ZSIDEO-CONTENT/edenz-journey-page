@@ -69,7 +69,7 @@ function App() {
             <Route 
               path="/student/dashboard" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresStudent={true}>
                   <StudentDashboard />
                 </ProtectedRoute>
               } 
@@ -77,7 +77,7 @@ function App() {
             <Route 
               path="/student/profile" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresStudent={true}>
                   <StudentProfile />
                 </ProtectedRoute>
               } 
@@ -85,7 +85,7 @@ function App() {
             <Route 
               path="/student/applications" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresStudent={true}>
                   <StudentApplications />
                 </ProtectedRoute>
               } 
@@ -93,7 +93,7 @@ function App() {
             <Route 
               path="/student/documents" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresStudent={true}>
                   <StudentDocuments />
                 </ProtectedRoute>
               } 
@@ -101,7 +101,7 @@ function App() {
             <Route 
               path="/student/recommendations" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresStudent={true}>
                   <StudentRecommendations />
                 </ProtectedRoute>
               } 
@@ -115,7 +115,7 @@ function App() {
             <Route 
               path="/admin/dashboard" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresAdmin={true}>
                   <AdminDashboard />
                 </ProtectedRoute>
               } 
@@ -126,7 +126,7 @@ function App() {
             <Route 
               path="/processing/dashboard" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresProcessing={true}>
                   <ProcessingDashboard />
                 </ProtectedRoute>
               } 
@@ -134,7 +134,7 @@ function App() {
             <Route 
               path="/processing/students" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresProcessing={true}>
                   <ProcessingStudents />
                 </ProtectedRoute>
               } 
@@ -142,7 +142,7 @@ function App() {
             <Route 
               path="/processing/students/:id" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresProcessing={true}>
                   <ProcessingStudent />
                 </ProtectedRoute>
               } 
@@ -150,7 +150,7 @@ function App() {
             <Route 
               path="/processing/applications" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresProcessing={true}>
                   <ProcessingApplications />
                 </ProtectedRoute>
               } 
@@ -158,8 +158,19 @@ function App() {
             <Route 
               path="/processing/recommendations" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiresProcessing={true}>
                   <ProcessingRecommendations />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* B2B routes */}
+            <Route path="/b2b/login" element={<B2BLogin />} />
+            <Route 
+              path="/b2b/dashboard" 
+              element={
+                <ProtectedRoute requiresB2B={true}>
+                  <B2BDashboard />
                 </ProtectedRoute>
               } 
             />
