@@ -110,7 +110,7 @@ const AdminDashboard = () => {
           <div className="ml-auto flex items-center space-x-4">
             <Button
               variant="outline"
-              onClick={() => navigate("/admin/register-processing")}
+              onClick={() => navigate("/admin/processing/register")}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -255,7 +255,7 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="space-y-4">
                   <Button
-                    onClick={() => navigate("/admin/register-processing")}
+                    onClick={() => navigate("/admin/processing/register")}
                     className="w-full justify-start"
                   >
                     <Plus className="mr-2 h-4 w-4" />
