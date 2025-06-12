@@ -22,8 +22,11 @@ class User(AbstractUser):
     visa_rejections = models.JSONField(blank=True, null=True)
     family_abroad = models.BooleanField(default=False)
     is_first_time_consultation = models.BooleanField(default=True)
-    consultation_goals = ArrayField(models.TextField(), blank=True, null=True)
-    managed_regions = ArrayField(models.CharField(max_length=100), blank=True, null=True)
+    # uncomment in production
+    # consultation_goals = ArrayField(models.TextField(), blank=True, null=True)
+    # managed_regions = ArrayField(models.CharField(max_length=100), blank=True, null=True)
+    consultation_goals = models.JSONField(blank=True, null=True)
+    managed_regions = models.JSONField(blank=True, null=True)
     created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_users')
     
     # Use email as the unique identifier for authentication
