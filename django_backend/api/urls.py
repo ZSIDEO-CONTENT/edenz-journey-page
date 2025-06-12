@@ -24,7 +24,7 @@ router.register(r'destination-guides', DestinationGuideViewSet)
 router.register(r'destination-documents', DestinationDocumentViewSet)
 router.register(r'destination-faqs', DestinationFAQViewSet)
 router.register(r'student-subscriptions', StudentSubscriptionViewSet)
-router.register(r'b2b-users', B2BUsersViewSet)
+router.register(r'b2b-users', B2BUsersViewSet, basename='b2buser')
 
 urlpatterns = [
     # Authentication endpoints
