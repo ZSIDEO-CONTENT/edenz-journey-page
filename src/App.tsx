@@ -38,6 +38,10 @@ import ProcessingStudent from '@/pages/processing/ProcessingStudent';
 import ProcessingApplications from '@/pages/processing/ProcessingApplications';
 import ProcessingRecommendations from '@/pages/processing/ProcessingRecommendations';
 
+// B2B routes
+import B2BLogin from '@/pages/b2b/B2BLogin';
+import B2BDashboard from '@/pages/b2b/B2BDashboard';
+
 import ProtectedRoute from '@/components/ProtectedRoute';
 import './App.css';
 
