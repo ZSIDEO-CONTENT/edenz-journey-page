@@ -47,7 +47,7 @@ const Hero = () => {
             {/* Main image with lower z-index */}
             <div className="relative z-0 rounded-3xl overflow-hidden shadow-2xl animate-slide-left hover:scale-105 transition-transform duration-500">
               <img 
-                src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070" 
+                src="images/heroside.jpg" 
                 alt="Students studying abroad" 
                 className="w-full h-[500px] object-cover transition-transform duration-700 hover:scale-110"
               />

@@ -41,7 +41,7 @@ const CTA = () => {
             
             <div className="relative h-full min-h-[300px] md:min-h-0">
               <img 
-                src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2071" 
+                src="images/cta.jpg" 
                 alt="Student studying abroad" 
                 className="absolute inset-0 w-full h-full object-cover"
               />

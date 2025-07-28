@@ -14,6 +14,9 @@ import NotFound from '@/pages/NotFound';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
 import CookiesPolicy from '@/pages/CookiesPolicy';
+import ChatWidget from '@/components/ChatWidget';
+import CallWidget from '@/components/CallWidget';
+
 
 // Student routes
 import StudentLogin from '@/pages/student/StudentLogin';
@@ -189,6 +192,9 @@ function App() {
             {/* Catch all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+
+           <ChatWidget />
+      <CallWidget />
         </div>
       </Router>
       <Toaster />
