@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, BookOpen, Plane, FileText, Building, Globe, Award, Users, BookMarked, FileCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const servicesData = [
   {
@@ -72,7 +73,7 @@ const Services = () => {
         {/* Hero Section */}
         <section className="pt-32 pb-20 relative overflow-hidden">
           <div className="hero-blob h-[600px] w-[600px] right-[-300px] top-[-100px] opacity-30"></div>
-          
+
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4">
@@ -95,8 +96,8 @@ const Services = () => {
               <div className="flex justify-center mb-12">
                 <TabsList className="bg-white/80 p-1 rounded-xl shadow-md">
                   {servicesData.map((service) => (
-                    <TabsTrigger 
-                      key={service.id} 
+                    <TabsTrigger
+                      key={service.id}
                       value={service.id}
                       className="data-[state=active]:bg-primary data-[state=active]:text-white px-4 py-2 rounded-lg"
                     >
@@ -108,7 +109,7 @@ const Services = () => {
                   ))}
                 </TabsList>
               </div>
-              
+
               {servicesData.map((service) => (
                 <TabsContent key={service.id} value={service.id} className="animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
@@ -118,7 +119,7 @@ const Services = () => {
                       </div>
                       <h2 className="text-3xl font-bold mb-6">{service.title}</h2>
                       <p className="text-gray-600 mb-8">{service.description}</p>
-                      
+
                       <div className="space-y-4 mb-8">
                         {service.features.map((feature, idx) => (
                           <div key={idx} className="flex items-start gap-3">
@@ -131,16 +132,16 @@ const Services = () => {
                           </div>
                         ))}
                       </div>
-                      
+
                       <Button className="btn-primary">
                         Learn More About {service.title}
                       </Button>
                     </div>
-                    
+
                     <div className="relative rounded-2xl overflow-hidden shadow-xl h-[400px]">
-                      <img 
-                        src={service.image} 
-                        alt={service.title} 
+                      <img
+                        src={service.image}
+                        alt={service.title}
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -166,51 +167,61 @@ const Services = () => {
                 Achieve your target scores with our specialized test preparation programs taught by experienced instructors.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 {
                   icon: <FileCheck />,
                   title: "IELTS Preparation",
-                  description: "Comprehensive coaching for all IELTS modules with regular mock tests and detailed feedback."
+                  description: "Comprehensive coaching for all IELTS modules with regular mock tests and detailed feedback.",
+                  link: "/services/ielts"
                 },
                 {
                   icon: <FileCheck />,
                   title: "PTE Academic",
-                  description: "Expert guidance for PTE Academic with focus on scoring techniques and time management strategies."
+                  description: "Expert guidance for PTE Academic with focus on scoring techniques and time management strategies.",
+                  link: "/services/pte"
                 },
                 {
                   icon: <FileCheck />,
                   title: "TOEFL iBT",
-                  description: "Structured preparation program for TOEFL iBT covering all four sections with practice materials."
+                  description: "Structured preparation program for TOEFL iBT covering all four sections with practice materials.",
+                  link: "/services/toefl"
                 },
                 {
                   icon: <FileCheck />,
                   title: "GRE Coaching",
-                  description: "Intensive GRE preparation focusing on Verbal, Quantitative, and Analytical Writing sections."
+                  description: "Intensive GRE preparation focusing on Verbal, Quantitative, and Analytical Writing sections.",
+                  link: "/services/gre"
                 },
                 {
                   icon: <FileCheck />,
                   title: "GMAT Training",
-                  description: "Specialized GMAT coaching for business school aspirants with emphasis on problem-solving."
+                  description: "Specialized GMAT coaching for business school aspirants with emphasis on problem-solving.",
+                  link: "/services/gmat"
                 },
                 {
                   icon: <FileCheck />,
                   title: "SAT Preparation",
-                  description: "Comprehensive SAT preparation program for high school students applying to US universities."
+                  description: "Comprehensive SAT preparation program for high school students applying to US universities.",
+                  link: "/contact"
                 }
               ].map((service, index) => (
-                <div 
-                  key={index} 
-                  className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                <Link
+                  to={service.link}
+                  key={index}
                 >
-                  <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
-                    {service.icon}
+                  <div
+                    className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in cursor-pointer h-full"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="bg-primary/10 text-primary rounded-xl p-3 inline-block mb-4">
+                      {service.icon}
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">{service.title}</h3>
+                    <p className="text-gray-600">{service.description}</p>
                   </div>
-                  <h3 className="text-xl font-bold mb-3">{service.title}</h3>
-                  <p className="text-gray-600">{service.description}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -230,7 +241,7 @@ const Services = () => {
                 Beyond our core services, we offer a range of additional support to ensure a smooth and successful study abroad experience.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 {
@@ -264,8 +275,8 @@ const Services = () => {
                   description: "Assistance in identifying and applying for scholarships and financial aid opportunities."
                 }
               ].map((service, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 animate-fade-in"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >

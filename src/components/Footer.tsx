@@ -27,7 +27,7 @@ const Footer = () => {
               </a>
             </div>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-bold mb-6 text-left">Services</h3>
             <ul className="space-y-3 text-left">
@@ -38,7 +38,7 @@ const Footer = () => {
               <li><Link to="/services" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">GRE/GMAT Coaching</Link></li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-bold mb-6 text-left">Destinations</h3>
             <ul className="space-y-3 text-left">
@@ -50,20 +50,20 @@ const Footer = () => {
               <li><Link to="/countries" onClick={scrollToTop} className="text-gray-400 hover:text-primary transition-colors">New Zealand</Link></li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-bold mb-6 text-left">Contact Us</h3>
             <ul className="space-y-4">
               <li className="flex items-start">
                 <MapPin className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
                 <div className="text-left">
-                  <a 
-                    href="https://maps.app.goo.gl/dw35KH1WUHoX6aPP7" 
-                    target="_blank" 
+                  <a
+                    href="https://maps.app.goo.gl/dw35KH1WUHoX6aPP7"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-400 hover:text-primary transition-colors"
                   >
-                    627 B Iqbal Avenua, Khayban e jinnah road, near UCP University,  Johar Town, Lahore 54000, Pakistan.
+                    21 F1 W, F1 Main Boluvard, WAPDA Town Lahore, 54000
                   </a>
                 </div>
               </li>
@@ -91,7 +91,7 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-500 mb-4 md:mb-0">
@@ -99,7 +99,7 @@ const Footer = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-4 md:gap-6">
               <Link to="/privacy-policy" onClick={scrollToTop} className="text-gray-500 hover:text-primary transition-colors">Privacy Policy</Link>
-                <Link to="/refund-policy" onClick={scrollToTop} className="text-gray-500 hover:text-primary transition-colors">Refund Policy</Link>
+              <Link to="/refund-policy" onClick={scrollToTop} className="text-gray-500 hover:text-primary transition-colors">Refund Policy</Link>
               <Link to="/terms-of-service" onClick={scrollToTop} className="text-gray-500 hover:text-primary transition-colors">Terms of Service</Link>
               <Link to="/cookies-policy" onClick={scrollToTop} className="text-gray-500 hover:text-primary transition-colors">Cookies Policy</Link>
             </div>

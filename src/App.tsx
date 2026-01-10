@@ -7,15 +7,27 @@ import Index from '@/pages/Index';
 import About from '@/pages/About';
 import Services from '@/pages/Services';
 import Contact from '@/pages/Contact';
-import BookConsultation from '@/pages/BookConsultation';
 import Countries from '@/pages/Countries';
-import Chat from '@/pages/Chat';
+// import Chat from '@/pages/Chat';
 import NotFound from '@/pages/NotFound';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
 import CookiesPolicy from '@/pages/CookiesPolicy';
-import ChatWidget from '@/components/ChatWidget';
+// import ChatWidget from '@/components/ChatWidget';
 import CallWidget from '@/components/CallWidget';
+
+// Service Pages
+import IELTS from '@/pages/services/IELTS';
+import PTE from '@/pages/services/PTE';
+import TOEFL from '@/pages/services/TOEFL';
+import GRE from '@/pages/services/GRE';
+import GMAT from '@/pages/services/GMAT';
+
+// Legal Pages
+import LegalPolicies from '@/pages/LegalPolicies';
+
+// Components
+import ScrollToTop from '@/components/ScrollToTop';
 
 
 // Student routes
@@ -55,6 +67,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <ScrollToTop />
         <div className="App">
           <Routes>
             {/* Public routes */}
@@ -62,10 +75,20 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/book-consultation" element={<BookConsultation />} />
+            {/* <Route path="/book-consultation" element={<BookConsultation />} /> */}
             <Route path="/countries" element={<Countries />} />
-            <Route path="/chat" element={<Chat />} />
-            
+            {/* <Route path="/chat" element={<Chat />} /> */}
+
+            {/* Service Routes */}
+            <Route path="/services/ielts" element={<IELTS />} />
+            <Route path="/services/pte" element={<PTE />} />
+            <Route path="/services/toefl" element={<TOEFL />} />
+            <Route path="/services/gre" element={<GRE />} />
+            <Route path="/services/gmat" element={<GMAT />} />
+
+            {/* Legal Hub */}
+            <Route path="/legal" element={<LegalPolicies />} />
+
             {/* Policy pages */}
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -75,128 +98,128 @@ function App() {
             {/* Student routes */}
             <Route path="/student/login" element={<StudentLogin />} />
             <Route path="/student/register" element={<StudentRegister />} />
-            <Route 
-              path="/student/dashboard" 
+            <Route
+              path="/student/dashboard"
               element={
                 <ProtectedRoute requiresStudent={true}>
                   <StudentDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/student/profile" 
+            <Route
+              path="/student/profile"
               element={
                 <ProtectedRoute requiresStudent={true}>
                   <StudentProfile />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/student/applications" 
+            <Route
+              path="/student/applications"
               element={
                 <ProtectedRoute requiresStudent={true}>
                   <StudentApplications />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/student/documents" 
+            <Route
+              path="/student/documents"
               element={
                 <ProtectedRoute requiresStudent={true}>
                   <StudentDocuments />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/student/recommendations" 
+            <Route
+              path="/student/recommendations"
               element={
                 <ProtectedRoute requiresStudent={true}>
                   <StudentRecommendations />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* Admin routes */}
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/register" element={<AdminRegister />} />
-            <Route 
-              path="/admin/processing/register" 
+            <Route
+              path="/admin/processing/register"
               element={
                 <ProtectedRoute requiresAdmin={true}>
                   <ProcessingRegister />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin/dashboard" 
+            <Route
+              path="/admin/dashboard"
               element={
                 <ProtectedRoute requiresAdmin={true}>
                   <AdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* Processing routes */}
             <Route path="/processing/login" element={<ProcessingLogin />} />
-            <Route 
-              path="/processing/dashboard" 
+            <Route
+              path="/processing/dashboard"
               element={
                 <ProtectedRoute requiresProcessing={true}>
                   <ProcessingDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/processing/students" 
+            <Route
+              path="/processing/students"
               element={
                 <ProtectedRoute requiresProcessing={true}>
                   <ProcessingStudents />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/processing/students/:id" 
+            <Route
+              path="/processing/students/:id"
               element={
                 <ProtectedRoute requiresProcessing={true}>
                   <ProcessingStudent />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/processing/applications" 
+            <Route
+              path="/processing/applications"
               element={
                 <ProtectedRoute requiresProcessing={true}>
                   <ProcessingApplications />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/processing/recommendations" 
+            <Route
+              path="/processing/recommendations"
               element={
                 <ProtectedRoute requiresProcessing={true}>
                   <ProcessingRecommendations />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* B2B routes */}
             <Route path="/b2b/login" element={<B2BLogin />} />
-            <Route 
-              path="/b2b/dashboard" 
+            <Route
+              path="/b2b/dashboard"
               element={
                 <ProtectedRoute requiresB2B={true}>
                   <B2BDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* Catch all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
 
-           <ChatWidget />
-      <CallWidget />
+          {/* <ChatWidget /> */}
+          <CallWidget />
         </div>
       </Router>
       <Toaster />

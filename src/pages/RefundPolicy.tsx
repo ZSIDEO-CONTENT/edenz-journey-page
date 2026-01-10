@@ -43,6 +43,9 @@ const RefundPolicy = () => {
                   advisory / processing services and not physical products, all
                   fees paid are considered service fees.
                 </p>
+                <p className="mb-6 font-medium text-red-600 bg-red-50 p-4 rounded-lg border border-red-100">
+                  IMPORTANT: Upfront payments are not refundable as we move through with you for more than 3 to 4 months and sometimes year. This fullfills our operational cost. Consultancy prices may vary from place to place.
+                </p>
 
                 <h2 className="text-2xl font-bold mb-4">
                   2. Non-Refundable Services
@@ -78,7 +81,7 @@ const RefundPolicy = () => {
                 </h2>
                 <p className="mb-6">
                   If you have paid for a service package and <strong>no work
-                  has started yet</strong> — meaning no consultation delivered,
+                    has started yet</strong> — meaning no consultation delivered,
                   no documents collected, no application guidance provided —
                   you may request a cancellation. Approval of such a refund is
                   at the discretion of Edenz Consultant and may be subject to
@@ -96,8 +99,12 @@ const RefundPolicy = () => {
                   <li>Visa application fees / biometric fees</li>
                   <li>Medical exam fees</li>
                   <li>Courier / attestation / translation / notarization costs</li>
+                  <li>Courier / attestation / translation / notarization costs</li>
                   <li>Language tests (IELTS, PTE, TOEFL, etc.)</li>
                 </ul>
+                <p className="mb-6 font-medium text-red-600 bg-red-50 p-4 rounded-lg border border-red-100">
+                  For IELTS, PTE, TOEFL, GRE, and GMAT preparation or booking services, there is a fixed non-refundable fee.
+                </p>
                 <p className="mb-6">
                   are strictly <strong>non-refundable</strong> because they are
                   paid to third parties, not to Edenz Consultant.
