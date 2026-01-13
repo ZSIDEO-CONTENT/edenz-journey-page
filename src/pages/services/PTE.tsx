@@ -102,9 +102,14 @@ const PTE = () => {
                                 Join our expert-led PTE coaching sessions and secure your admission to top global universities.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link to="/test-prep-checkout?service=pte">
+                                    <Button size="lg" className="w-full sm:w-auto font-bold bg-white text-primary hover:bg-gray-100">
+                                        Register for $200 Now
+                                    </Button>
+                                </Link>
                                 <a href="tel:+923334228697">
-                                    <Button size="lg" variant="secondary" className="w-full sm:w-auto font-bold">
-                                        Call Now: +92 333 4228697
+                                    <Button size="lg" variant="outline" className="w-full sm:w-auto font-bold border-white text-white hover:bg-white/10">
+                                        Call Now
                                     </Button>
                                 </a>
                                 <a href="https://wa.me/923334228697" target="_blank" rel="noopener noreferrer">

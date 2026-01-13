@@ -95,12 +95,17 @@ const GRE = () => {
                         <div className="text-center bg-primary rounded-3xl p-12 text-white">
                             <h2 className="text-3xl md:text-4xl font-bold mb-6">Get Grad School Ready</h2>
                             <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-                                Prepare with the best resources and expert guidance to achieve your target GRE score.
+                                Prepare with the best to get into the best. Start your GRE journey with Edenz Consultant.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link to="/test-prep-checkout?service=gre">
+                                    <Button size="lg" className="w-full sm:w-auto font-bold bg-white text-primary hover:bg-gray-100">
+                                        Register for $500 Now
+                                    </Button>
+                                </Link>
                                 <a href="tel:+923334228697">
-                                    <Button size="lg" variant="secondary" className="w-full sm:w-auto font-bold">
-                                        Call Now: +92 333 4228697
+                                    <Button size="lg" variant="outline" className="w-full sm:w-auto font-bold border-white text-white hover:bg-white/10">
+                                        Call Now
                                     </Button>
                                 </a>
                                 <a href="https://wa.me/923334228697" target="_blank" rel="noopener noreferrer">

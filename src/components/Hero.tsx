@@ -26,6 +26,12 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Link to="/test-prep-checkout">
+                <Button size="lg" className="btn-primary group">
+                  <BookOpen className="mr-2 h-5 w-5" />
+                  Test Preparations
+                </Button>
+              </Link>
               <Link to="/countries">
                 <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/5 transition-all duration-300 hover:scale-105">
                   Explore Destinations

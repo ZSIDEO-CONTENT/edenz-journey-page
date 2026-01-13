@@ -95,12 +95,17 @@ const GMAT = () => {
                         <div className="text-center bg-primary rounded-3xl p-12 text-white">
                             <h2 className="text-3xl md:text-4xl font-bold mb-6">Target Top Business Schools</h2>
                             <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-                                Prepare fast and smart with our expert GMAT coaching.
+                                Master the GMAT and open the door to top business schools. Contact us to get started.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <Link to="/test-prep-checkout?service=gmat">
+                                    <Button size="lg" className="w-full sm:w-auto font-bold bg-white text-primary hover:bg-gray-100">
+                                        Register for $500 Now
+                                    </Button>
+                                </Link>
                                 <a href="tel:+923334228697">
-                                    <Button size="lg" variant="secondary" className="w-full sm:w-auto font-bold">
-                                        Call Now: +92 333 4228697
+                                    <Button size="lg" variant="outline" className="w-full sm:w-auto font-bold border-white text-white hover:bg-white/10">
+                                        Call Now
                                     </Button>
                                 </a>
                                 <a href="https://wa.me/923334228697" target="_blank" rel="noopener noreferrer">

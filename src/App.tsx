@@ -22,6 +22,7 @@ import PTE from '@/pages/services/PTE';
 import TOEFL from '@/pages/services/TOEFL';
 import GRE from '@/pages/services/GRE';
 import GMAT from '@/pages/services/GMAT';
+import TestPrepCheckout from '@/pages/TestPrepCheckout';
 
 // Legal Pages
 import LegalPolicies from '@/pages/LegalPolicies';
@@ -85,6 +86,7 @@ function App() {
             <Route path="/services/toefl" element={<TOEFL />} />
             <Route path="/services/gre" element={<GRE />} />
             <Route path="/services/gmat" element={<GMAT />} />
+            <Route path="/test-prep-checkout" element={<TestPrepCheckout />} />
 
             {/* Legal Hub */}
             <Route path="/legal" element={<LegalPolicies />} />
