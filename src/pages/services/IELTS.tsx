@@ -109,7 +109,7 @@ const IELTS = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/test-prep-checkout?service=ielts">
                   <Button size="lg" className="w-full sm:w-auto font-bold bg-white text-primary hover:bg-gray-100">
-                    Register for $250 Now
+                    Register for PKR 70,000 Now
                   </Button>
                 </Link>
                 <a href="tel:+923334228697">

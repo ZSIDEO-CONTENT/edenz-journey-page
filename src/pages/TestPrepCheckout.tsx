@@ -16,11 +16,11 @@ const TestPrepCheckout = () => {
     const serviceParam = searchParams.get('service');
 
     const services = [
-        { id: 'ielts', name: 'IELTS Preparation', price: 250 },
-        { id: 'pte', name: 'PTE Preparation', price: 200 },
-        { id: 'toefl', name: 'TOEFL Preparation', price: 300 },
-        { id: 'gre', name: 'GRE Preparation', price: 500 },
-        { id: 'gmat', name: 'GMAT Preparation', price: 500 },
+        { id: 'ielts', name: 'IELTS Preparation', price: 70000 },
+        { id: 'pte', name: 'PTE Preparation', price: 60000 },
+        { id: 'toefl', name: 'TOEFL Preparation', price: 90000 },
+        { id: 'gre', name: 'GRE Preparation', price: 150000 },
+        { id: 'gmat', name: 'GMAT Preparation', price: 150000 },
     ];
 
     const [selectedService, setSelectedService] = useState(services[0].id);
@@ -79,18 +79,18 @@ const TestPrepCheckout = () => {
 
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600">{currentService.name}</span>
-                                        <span className="font-medium">${currentService.price}.00</span>
+                                        <span className="font-medium">PKR {currentService.price.toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600">Processing Fee</span>
-                                        <span className="font-medium">$0.00</span>
+                                        <span className="font-medium">PKR 0.00</span>
                                     </div>
 
                                     <Separator />
 
                                     <div className="flex justify-between items-center font-bold text-lg">
                                         <span>Total</span>
-                                        <span className="text-primary">${currentService.price}.00</span>
+                                        <span className="text-primary">PKR {currentService.price.toLocaleString()}</span>
                                     </div>
                                 </CardContent>
                                 <CardFooter className="bg-gray-50/50 p-4 border-t">
@@ -147,7 +147,7 @@ const TestPrepCheckout = () => {
                                     </div>
 
                                     <Button className="w-full btn-primary text-lg py-6 mt-4">
-                                        Pay ${currentService.price}.00 Now
+                                        Pay PKR {currentService.price.toLocaleString()} Now
                                     </Button>
 
                                     <p className="text-xs text-center text-gray-400 mt-4">
