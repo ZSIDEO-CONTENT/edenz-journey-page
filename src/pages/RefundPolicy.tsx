@@ -77,7 +77,7 @@ const RefundPolicy = () => {
                 </p>
 
                 <h2 className="text-2xl font-bold mb-4">
-                  3. Refund Eligibility (Before Work Begins)
+                  3. Cancellation & Refund Eligibility (Before Work Begins)
                 </h2>
                 <p className="mb-6">
                   If you have paid for a service package and <strong>no work
@@ -145,7 +145,14 @@ const RefundPolicy = () => {
                 </p>
 
                 <h2 className="text-2xl font-bold mb-4">
-                  7. How to Contact Us
+                  7. Refund Turnaround Time
+                </h2>
+                <p className="mb-6">
+                  If a refund request is approved by Edenz Consultant, the refund will be processed within <strong>10-15 business days</strong>. The amount will be credited back to the original method of payment or via bank transfer, as applicable.
+                </p>
+
+                <h2 className="text-2xl font-bold mb-4">
+                  8. How to Contact Us
                 </h2>
                 <p className="mb-2">
                   If you believe there has been an error in billing, or you
@@ -154,7 +161,7 @@ const RefundPolicy = () => {
                 <p className="mb-6">
                   <strong>Email:</strong> info@edenzconsultant.org
                   <br />
-                  <strong>Phone / WhatsApp:</strong> {/* put your office number here */}
+                  <strong>Phone / WhatsApp:</strong> +92 333 4228697
                 </p>
 
                 <p className="text-sm text-gray-600">

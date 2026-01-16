@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from "@/components/ui/button";
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -151,7 +152,10 @@ const TestPrepCheckout = () => {
                                     </Button>
 
                                     <p className="text-xs text-center text-gray-400 mt-4">
-                                        By clicking the button above, you agree to our Terms of Service and Refund Policy.
+                                        By clicking the button above, you agree to our{' '}
+                                        <Link to="/terms-of-service" className="underline hover:text-primary">Terms of Service</Link>
+                                        {' '}and{' '}
+                                        <Link to="/refund-policy" className="underline hover:text-primary">Refund Policy</Link>.
                                     </p>
                                 </CardContent>
                             </Card>
